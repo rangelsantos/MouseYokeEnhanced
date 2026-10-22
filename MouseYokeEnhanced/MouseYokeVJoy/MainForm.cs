@@ -178,6 +178,8 @@ public class MainForm : Form
 
 	private TrackBar tbCenterSpeed;
 
+	private TrackBar tbHudSize;
+
 	private CheckBox cbInvertPitch;
 
 	private CheckBox cbInvertRoll;
@@ -653,6 +655,16 @@ public class MainForm : Form
 		TopMost = true;
 		checks.Controls.AddRange(new Control[7] { cbSelfCenter, cbInvertPitch, cbInvertRoll, cbOverlay, cbMoveHud, cbHideCursor, cbTopMost });
 		AddRow(t, ref row, checks, SizeType.AutoSize, 0);
+		// Global like the HUD position (overlay.cfg), not per profile.
+		tbHudSize = AddSliderRow(t, ref row, "HUD size %", OverlayForm.MinSizePercent, OverlayForm.MaxSizePercent, OverlayForm.LoadSizePercent(), autosave: false);
+		tbHudSize.ValueChanged += (object? s, EventArgs e) =>
+		{
+			if (overlay == null || overlay.IsDisposed)
+			{
+				overlay = new OverlayForm();
+			}
+			overlay.SetSizePercent(tbHudSize.Value);
+		};
 		lblHotkeyHelp = new Label
 		{
 			AutoSize = true,

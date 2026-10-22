@@ -25,6 +25,16 @@ public class OverlayForm : Form
 
 	private Point dragStart;
 
+	private const int BaseSize = 260;
+
+	public const int MinSizePercent = 50;
+
+	public const int MaxSizePercent = 250;
+
+	private int sizePercent = 100;
+
+	private float HudScale => (float)sizePercent / 100f;
+
 	private const int GWL_EXSTYLE = -20;
 
 	private const int WS_EX_TRANSPARENT = 32;
@@ -54,7 +64,8 @@ public class OverlayForm : Form
 		ShowInTaskbar = false;
 		TopMost = true;
 		StartPosition = FormStartPosition.Manual;
-		Size = new Size(260, 260);
+		sizePercent = LoadSizePercent();
+		Size = ScaledSize();
 		BackColor = Color.Magenta;
 		TransparencyKey = Color.Magenta;
 		Opacity = 0.92;
@@ -68,42 +79,84 @@ public class OverlayForm : Form
 		return new Point(scr.Left + (scr.Width - Width) / 2, scr.Top + 40);
 	}
 
-	private Point? LoadPosition()
+	private Size ScaledSize()
+	{
+		int side = (int)Math.Round((float)BaseSize * HudScale);
+		return new Size(side, side);
+	}
+
+	// overlay.cfg is "x y [size%]"; files written before the size setting have only the position.
+	private static string[] ReadConfig()
 	{
 		try
 		{
 			if (File.Exists(PosPath))
 			{
-				string[] p = File.ReadAllText(PosPath).Split(new char[1] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-				if (p.Length >= 2 && int.TryParse(p[0], out var x) && int.TryParse(p[1], out var y))
-				{
-					Point pt = new Point(x, y);
-					Screen[] allScreens = Screen.AllScreens;
-					for (int i = 0; i < allScreens.Length; i++)
-					{
-						if (allScreens[i].Bounds.IntersectsWith(new Rectangle(pt, Size)))
-						{
-							return pt;
-						}
-					}
-				}
+				return File.ReadAllText(PosPath).Split(new char[1] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 			}
 		}
 		catch
 		{
 		}
+		return new string[0];
+	}
+
+	public static int LoadSizePercent()
+	{
+		string[] p = ReadConfig();
+		if (p.Length >= 3 && int.TryParse(p[2], out var pct))
+		{
+			return Math.Min(Math.Max(pct, MinSizePercent), MaxSizePercent);
+		}
+		return 100;
+	}
+
+	private Point? LoadPosition()
+	{
+		string[] p = ReadConfig();
+		if (p.Length >= 2 && int.TryParse(p[0], out var x) && int.TryParse(p[1], out var y))
+		{
+			Point pt = new Point(x, y);
+			Screen[] allScreens = Screen.AllScreens;
+			for (int i = 0; i < allScreens.Length; i++)
+			{
+				if (allScreens[i].Bounds.IntersectsWith(new Rectangle(pt, Size)))
+				{
+					return pt;
+				}
+			}
+		}
 		return null;
 	}
 
-	private void SavePosition()
+	private void SaveConfig()
 	{
 		try
 		{
-			File.WriteAllText(PosPath, $"{Location.X} {Location.Y}");
+			File.WriteAllText(PosPath, $"{Location.X} {Location.Y} {sizePercent}");
 		}
 		catch
 		{
 		}
+	}
+
+	// Resizes around the current center (so the HUD stays where the user placed it), kept inside that screen.
+	public void SetSizePercent(int percent)
+	{
+		percent = Math.Min(Math.Max(percent, MinSizePercent), MaxSizePercent);
+		if (percent == sizePercent)
+		{
+			return;
+		}
+		Point center = new Point(Location.X + Width / 2, Location.Y + Height / 2);
+		sizePercent = percent;
+		Size sz = ScaledSize();
+		Rectangle scr = Screen.FromPoint(center).Bounds;
+		int x = Math.Min(Math.Max(center.X - sz.Width / 2, scr.Left), Math.Max(scr.Right - sz.Width, scr.Left));
+		int y = Math.Min(Math.Max(center.Y - sz.Height / 2, scr.Top), Math.Max(scr.Bottom - sz.Height, scr.Top));
+		Bounds = new Rectangle(x, y, sz.Width, sz.Height);
+		SaveConfig();
+		Invalidate();
 	}
 
 	public void SetMovable(bool on)
@@ -118,7 +171,7 @@ public class OverlayForm : Form
 		Opacity = (on ? 1.0 : 0.92);
 		if (!on)
 		{
-			SavePosition();
+			SaveConfig();
 		}
 		Invalidate();
 	}
@@ -147,7 +200,7 @@ public class OverlayForm : Form
 		if (dragging)
 		{
 			dragging = false;
-			SavePosition();
+			SaveConfig();
 		}
 		base.OnMouseUp(e);
 	}
@@ -167,8 +220,12 @@ public class OverlayForm : Form
 		Graphics g = e.Graphics;
 		g.SmoothingMode = SmoothingMode.AntiAlias;
 		g.Clear(TransparencyKey);
+		// Everything below is laid out for the 260 px base size; the transform scales it as a whole.
+		g.ScaleTransform(HudScale, HudScale);
+		int w = (int)Math.Round((float)Width / HudScale);
+		int h = (int)Math.Round((float)Height / HudScale);
 		int pad = 12;
-		Rectangle panel = new Rectangle(pad, pad, Width - pad * 2, Height - pad * 2);
+		Rectangle panel = new Rectangle(pad, pad, w - pad * 2, h - pad * 2);
 		float cx = (float)panel.Left + (float)panel.Width / 2f;
 		float cy = (float)panel.Top + (float)panel.Height / 2f;
 		float r = (float)Math.Min(panel.Width, panel.Height) / 2f - 6f;

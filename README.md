@@ -136,8 +136,10 @@ nudge and see what feels good. Rough starting points:
 - **Hide cursor** — hides the mouse pointer while flying so it's not floating in your view.
   Recommended, especially in spring mode. It comes back the moment you press F9 to stop.
 - **The on-screen HUD** — a little attitude circle that shows up while you're flying. Tick
-  **Move HUD** to drag it anywhere you like, then untick to lock it in place. Untick **Show
-  HUD** if you don't want it at all.
+  **Move HUD** to drag it anywhere you like, then untick to lock it in place. The **HUD size**
+  slider makes it bigger or smaller (50–250%). It grows from its center, and it is easiest to
+  adjust with **Move HUD** ticked so you can see it. Untick **Show HUD** if you don't want it
+  at all. The HUD's position and size are the same for every aircraft profile.
 - **Rudder on your keyboard** — on the **Key → vJoy** tab, tick **Keyboard rudder** and you
   get smooth rudder without a joystick. The rudder keys are **Comma ,** and **Period .** to
   start with; change them on the **Hotkeys** tab. (Remember to bind Rudder Axis in the sim,
