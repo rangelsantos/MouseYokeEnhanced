@@ -38,6 +38,8 @@ public class KeyboardHook : IDisposable
 
 	private readonly HashSet<int> _down = new HashSet<int>();
 
+	private readonly HashSet<int> _stale = new HashSet<int>();
+
 	public event Action<int> KeyDown;
 
 	public event Action<int> KeyUp;
@@ -53,6 +55,9 @@ public class KeyboardHook : IDisposable
 
 	[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 	private static extern nint GetModuleHandle(string lpModuleName);
+
+	[DllImport("user32.dll")]
+	private static extern short GetAsyncKeyState(int vKey);
 
 	public void Install()
 	{
@@ -86,6 +91,7 @@ public class KeyboardHook : IDisposable
 				break;
 			case 257:
 			case 261:
+				_stale.Remove(vk);
 				if (_down.Remove(vk))
 				{
 					KeyUp?.Invoke(vk);
@@ -94,6 +100,40 @@ public class KeyboardHook : IDisposable
 			}
 		}
 		return CallNextHookEx(_hook, nCode, wParam, lParam);
+	}
+
+	// Fires KeyUp for keys whose key-up never reached the hook (Win+L, UAC prompt,
+	// Ctrl+Alt+Del, focus on an elevated window...), so trim/rudder/buttons can't stay held.
+	// A key must read as up on two consecutive calls, so this never races the hook itself.
+	public void ReleaseStaleKeys()
+	{
+		if (_down.Count == 0)
+		{
+			_stale.Clear();
+			return;
+		}
+		List<int> released = null;
+		foreach (int vk in _down)
+		{
+			if ((GetAsyncKeyState(vk) & 0x8000) != 0)
+			{
+				_stale.Remove(vk);
+			}
+			else if (!_stale.Add(vk))
+			{
+				(released ??= new List<int>()).Add(vk);
+			}
+		}
+		if (released == null)
+		{
+			return;
+		}
+		foreach (int vk in released)
+		{
+			_down.Remove(vk);
+			_stale.Remove(vk);
+			KeyUp?.Invoke(vk);
+		}
 	}
 
 	public void Dispose()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -65,19 +66,29 @@ public class MainForm : Form
 		public RAWMOUSE mouse;
 	}
 
+	private struct RECT
+	{
+		public int Left;
+
+		public int Top;
+
+		public int Right;
+
+		public int Bottom;
+	}
+
+	private sealed class HotkeyRow
+	{
+		public Hotkey Hotkey;
+
+		public Button Key;
+
+		public Control ConflictBar;
+
+		public Label ConflictText;
+	}
+
 	private const uint VJOY_ID = 1u;
-
-	private const int VK_F9 = 120;
-
-	private const int VK_PGUP = 33;
-
-	private const int VK_PGDN = 34;
-
-	private const int VK_INS = 45;
-
-	private const int VK_DEL = 46;
-
-	private const int VK_HOME = 36;
 
 	private readonly KeyboardHook hook = new KeyboardHook();
 
@@ -113,11 +124,29 @@ public class MainForm : Form
 
 	private int frame;
 
+	private readonly Stopwatch clock = Stopwatch.StartNew();
+
+	private double lastTick;
+
+	private Rectangle flightScreen;
+
 	private bool loading;
 
 	private bool switching;
 
 	private Action<int> capture;
+
+	private readonly List<HotkeyRow> hotkeyRows = new List<HotkeyRow>();
+
+	private HotkeyRow capturingRow;
+
+	private HotkeyRow conflictRow;
+
+	private int conflictVk;
+
+	private Hotkey conflictWith;
+
+	private string resetHint = "";
 
 	private OverlayForm overlay;
 
@@ -130,6 +159,8 @@ public class MainForm : Form
 	private Label lblAxis;
 
 	private Label lblTrim;
+
+	private Label lblHotkeyHelp;
 
 	private TrackBar tbRollSens;
 
@@ -165,10 +196,6 @@ public class MainForm : Form
 
 	private CheckBox cbRudder;
 
-	private Button btnRudderL;
-
-	private Button btnRudderR;
-
 	private TrackBar tbRudderRate;
 
 	private readonly List<(ButtonBinding b, Panel lamp)> bindRows = new List<(ButtonBinding, Panel)>();
@@ -194,6 +221,15 @@ public class MainForm : Form
 	[DllImport("user32.dll")]
 	private static extern bool SetCursorPos(int x, int y);
 
+	[DllImport("user32.dll")]
+	private static extern bool ClipCursor(ref RECT lpRect);
+
+	[DllImport("user32.dll")]
+	private static extern bool ClipCursor(nint lpRect);
+
+	[DllImport("user32.dll")]
+	private static extern bool GetClipCursor(out RECT lpRect);
+
 	public MainForm()
 	{
 		Text = "MouseYoke — vJoy";
@@ -215,6 +251,7 @@ public class MainForm : Form
 		AppDomain.CurrentDomain.ProcessExit += (object? s, EventArgs e) =>
 		{
 			CursorHider.Restore();
+			ReleaseCursor();
 		};
 		loop = new Timer
 		{
@@ -253,7 +290,7 @@ public class MainForm : Form
 		{
 			vjoyButtonCount = n;
 		}
-		SetStatus("Ready. F9 to fly. Key bindings are live whenever the app runs.", Color.DarkGray);
+		SetStatus((profile.ToggleVk != 0) ? ("Ready. " + Profile.KeyName(profile.ToggleVk) + " to fly. Key bindings are live whenever the app runs.") : "Ready. Set a Fly / standby key on the Hotkeys tab.", Color.DarkGray);
 		foreach (ButtonBinding b in profile.Buttons)
 		{
 			if (b.Button > vjoyButtonCount)
@@ -420,11 +457,17 @@ public class MainForm : Form
 		{
 			BackColor = Bg
 		};
+		TabPage tabHotkeys = new TabPage("Hotkeys")
+		{
+			BackColor = Bg
+		};
 		tabs.TabPages.Add(tabFlight);
 		tabs.TabPages.Add(tabKeys);
+		tabs.TabPages.Add(tabHotkeys);
 		root.Controls.Add(tabs, 0, 1);
 		BuildFlightTab(tabFlight);
 		BuildKeysTab(tabKeys);
+		BuildHotkeysTab(tabHotkeys);
 	}
 
 	private Button TopBtn(string text, EventHandler onClick, Color? color = null)
@@ -443,7 +486,7 @@ public class MainForm : Form
 		TableLayoutPanel t = NewColumn();
 		host.Controls.Add(t);
 		int row = 0;
-		btnToggle = Styled("Activate  (F9)", Color.FromArgb(40, 120, 90));
+		btnToggle = Styled("Activate", Color.FromArgb(40, 120, 90));
 		btnToggle.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
 		btnToggle.Margin = new Padding(2, 3, 2, 6);
 		btnToggle.Click += (object? s, EventArgs e) =>
@@ -476,7 +519,7 @@ public class MainForm : Form
 		tbExpo = AddSliderRow(t, ref row, "Expo %", 0, 90, 40);
 		tbSmooth = AddSliderRow(t, ref row, "Smoothing %", 0, 80, 15);
 		tbCenterSpeed = AddSliderRow(t, ref row, "Auto-center speed (%/sec, spring mode)", 10, 300, 120);
-		tbTrimRate = AddSliderRow(t, ref row, "Trim rate (%/sec, hold PgUp/PgDn)", 1, 100, 25);
+		tbTrimRate = AddSliderRow(t, ref row, "Trim rate (%/sec, hold a trim key)", 1, 100, 25);
 		FlowLayoutPanel checks = new FlowLayoutPanel
 		{
 			AutoSize = true,
@@ -608,14 +651,14 @@ public class MainForm : Form
 		TopMost = true;
 		checks.Controls.AddRange(new Control[7] { cbSelfCenter, cbInvertPitch, cbInvertRoll, cbOverlay, cbMoveHud, cbHideCursor, cbTopMost });
 		AddRow(t, ref row, checks, SizeType.AutoSize, 0);
-		AddRow(t, ref row, new Label
+		lblHotkeyHelp = new Label
 		{
 			AutoSize = true,
 			MaximumSize = new Size(430, 0),
 			ForeColor = Color.Gray,
-			Margin = new Padding(2, 8, 2, 2),
-			Text = "F9 = fly / standby   •   PgUp/PgDn = pitch trim   •   Ins/Del = roll trim   •   Home = reset trim"
-		}, SizeType.AutoSize, 0, fill: false);
+			Margin = new Padding(2, 8, 2, 2)
+		};
+		AddRow(t, ref row, lblHotkeyHelp, SizeType.AutoSize, 0, fill: false);
 	}
 
 	private void BuildKeysTab(Control host)
@@ -665,7 +708,7 @@ public class MainForm : Form
 		AddRow(t, ref row, bindPanel, SizeType.Percent, 100);
 		cbRudder = new CheckBox
 		{
-			Text = "Keyboard rudder → vJoy Z axis (auto-centering)",
+			Text = "Keyboard rudder → vJoy Z axis (keys on the Hotkeys tab)",
 			ForeColor = ForeColor,
 			AutoSize = true,
 			Margin = new Padding(2, 6, 2, 4)
@@ -679,46 +722,311 @@ public class MainForm : Form
 			}
 		};
 		AddRow(t, ref row, cbRudder, SizeType.AutoSize, 0, fill: false);
-		FlowLayoutPanel rudBar = new FlowLayoutPanel
+		tbRudderRate = AddSliderRow(t, ref row, "Rudder ramp / return speed (%/sec)", 10, 200, 60);
+	}
+
+	private void BuildHotkeysTab(Control host)
+	{
+		TableLayoutPanel t = NewColumn();
+		host.Controls.Add(t);
+		int row = 0;
+		AddRow(t, ref row, new Label
 		{
 			AutoSize = true,
-			WrapContents = true,
-			Margin = new Padding(0, 0, 0, 0)
-		};
-		btnRudderL = Styled("Left:", Color.FromArgb(40, 40, 50));
-		btnRudderL.AutoSize = true;
-		btnRudderL.Padding = new Padding(8, 4, 8, 4);
-		btnRudderL.Margin = new Padding(2, 2, 8, 2);
-		btnRudderL.Click += (object? s, EventArgs e) =>
+			MaximumSize = new Size(430, 0),
+			ForeColor = Color.Silver,
+			Text = "Click a key to change it, then press the new key. Esc cancels, Backspace leaves the command unassigned."
+		}, SizeType.AutoSize, 0, fill: false);
+		string group = null;
+		foreach (Hotkey hk in Hotkey.All)
 		{
-			lblBindStatus.Text = "Press the LEFT rudder key...";
-			capture = (int vk) =>
+			if (hk.Group != group)
 			{
-				profile.RudderLeftVk = vk;
-				btnRudderL.Text = "Left:  " + Profile.KeyName(vk);
-				SaveActiveProfile();
-				lblBindStatus.Text = "";
-			};
-		};
-		rudBar.Controls.Add(btnRudderL);
-		btnRudderR = Styled("Right:", Color.FromArgb(40, 40, 50));
-		btnRudderR.AutoSize = true;
-		btnRudderR.Padding = new Padding(8, 4, 8, 4);
-		btnRudderR.Margin = new Padding(2, 2, 2, 2);
-		btnRudderR.Click += (object? s, EventArgs e) =>
+				group = hk.Group;
+				AddRow(t, ref row, new Label
+				{
+					Text = group,
+					ForeColor = Color.DarkGray,
+					AutoSize = true,
+					Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+					Margin = new Padding(2, 10, 2, 2)
+				}, SizeType.AutoSize, 0, fill: false);
+			}
+			AddRow(t, ref row, BuildHotkeyRow(hk), SizeType.AutoSize, 0);
+		}
+		AddRow(t, ref row, new Panel
 		{
-			lblBindStatus.Text = "Press the RIGHT rudder key...";
-			capture = (int vk) =>
+			BackColor = Bg
+		}, SizeType.Percent, 100);
+		TableLayoutPanel bottom = new TableLayoutPanel
+		{
+			ColumnCount = 2,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Margin = new Padding(2, 6, 2, 2),
+			ColumnStyles =
 			{
-				profile.RudderRightVk = vk;
-				btnRudderR.Text = "Right: " + Profile.KeyName(vk);
-				SaveActiveProfile();
-				lblBindStatus.Text = "";
-			};
+				new ColumnStyle(SizeType.Percent, 100f),
+				new ColumnStyle(SizeType.AutoSize)
+			}
 		};
-		rudBar.Controls.Add(btnRudderR);
-		AddRow(t, ref row, rudBar, SizeType.AutoSize, 0, fill: false);
-		tbRudderRate = AddSliderRow(t, ref row, "Rudder ramp / return speed (%/sec)", 10, 200, 60);
+		bottom.Controls.Add(new Label
+		{
+			Text = "Saved with the current aircraft profile.",
+			ForeColor = Color.DarkGray,
+			AutoSize = true,
+			Anchor = AnchorStyles.Left
+		}, 0, 0);
+		Button restore = Styled("Restore defaults", Color.FromArgb(45, 55, 75));
+		restore.AutoSize = true;
+		restore.Padding = new Padding(8, 3, 8, 3);
+		restore.Click += (object? s, EventArgs e) =>
+		{
+			RestoreDefaultHotkeys();
+		};
+		bottom.Controls.Add(restore, 1, 0);
+		AddRow(t, ref row, bottom, SizeType.AutoSize, 0);
+	}
+
+	private Control BuildHotkeyRow(Hotkey hk)
+	{
+		HotkeyRow r = new HotkeyRow
+		{
+			Hotkey = hk
+		};
+		TableLayoutPanel box = new TableLayoutPanel
+		{
+			ColumnCount = 1,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			BackColor = Color.FromArgb(30, 30, 38),
+			Margin = new Padding(2, 1, 2, 1),
+			ColumnStyles =
+			{
+				new ColumnStyle(SizeType.Percent, 100f)
+			}
+		};
+		TableLayoutPanel line = new TableLayoutPanel
+		{
+			ColumnCount = 3,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Dock = DockStyle.Fill,
+			Margin = Padding.Empty,
+			Padding = new Padding(8, 1, 2, 1),
+			ColumnStyles =
+			{
+				new ColumnStyle(SizeType.Percent, 100f),
+				new ColumnStyle(SizeType.AutoSize),
+				new ColumnStyle(SizeType.AutoSize)
+			}
+		};
+		line.Controls.Add(new Label
+		{
+			Text = hk.Label,
+			ForeColor = ForeColor,
+			AutoSize = true,
+			Anchor = AnchorStyles.Left
+		}, 0, 0);
+		r.Key = Styled("", Color.FromArgb(45, 45, 55));
+		r.Key.Width = 140;
+		r.Key.Height = 26;
+		r.Key.Margin = new Padding(2, 3, 2, 3);
+		r.Key.FlatAppearance.BorderColor = Color.FromArgb(240, 140, 60);
+		r.Key.Click += (object? s, EventArgs e) =>
+		{
+			BeginHotkeyCapture(r);
+		};
+		line.Controls.Add(r.Key, 1, 0);
+		Button reset = Styled("↺", Color.FromArgb(30, 30, 38));
+		reset.ForeColor = Color.DarkGray;
+		reset.Width = 28;
+		reset.Height = 26;
+		reset.Margin = new Padding(2, 3, 2, 3);
+		reset.AccessibleName = "Reset " + hk.Label + " to default";
+		reset.Click += (object? s, EventArgs e) =>
+		{
+			CancelHotkeyCapture();
+			AssignHotkey(r, hk.DefaultVk);
+		};
+		line.Controls.Add(reset, 2, 0);
+		box.Controls.Add(line, 0, 0);
+		TableLayoutPanel bar = new TableLayoutPanel
+		{
+			ColumnCount = 3,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Dock = DockStyle.Fill,
+			BackColor = Color.FromArgb(42, 34, 24),
+			Margin = Padding.Empty,
+			Padding = new Padding(8, 2, 2, 2),
+			Visible = false,
+			ColumnStyles =
+			{
+				new ColumnStyle(SizeType.Percent, 100f),
+				new ColumnStyle(SizeType.AutoSize),
+				new ColumnStyle(SizeType.AutoSize)
+			}
+		};
+		r.ConflictText = new Label
+		{
+			ForeColor = Color.FromArgb(242, 210, 176),
+			AutoSize = true,
+			Anchor = AnchorStyles.Left
+		};
+		bar.Controls.Add(r.ConflictText, 0, 0);
+		Button swap = Styled("Swap", Color.FromArgb(45, 70, 110));
+		swap.Size = new Size(60, 24);
+		swap.Click += (object? s, EventArgs e) =>
+		{
+			SwapHotkeyConflict();
+		};
+		bar.Controls.Add(swap, 1, 0);
+		Button cancel = Styled("Cancel", Color.FromArgb(60, 60, 70));
+		cancel.Size = new Size(60, 24);
+		cancel.Click += (object? s, EventArgs e) =>
+		{
+			CancelHotkeyCapture();
+		};
+		bar.Controls.Add(cancel, 2, 0);
+		r.ConflictBar = bar;
+		box.Controls.Add(bar, 0, 1);
+		hotkeyRows.Add(r);
+		return box;
+	}
+
+	private void BeginHotkeyCapture(HotkeyRow r)
+	{
+		CancelHotkeyCapture();
+		lblBindStatus.Text = "";
+		capturingRow = r;
+		RefreshHotkeyRows();
+		capture = (int vk) =>
+		{
+			capturingRow = null;
+			if (vk == (int)Keys.Escape)
+			{
+				RefreshHotkeyRows();
+				return;
+			}
+			AssignHotkey(r, (vk == (int)Keys.Back) ? 0 : vk);
+		};
+	}
+
+	private void CancelHotkeyCapture()
+	{
+		if (capturingRow != null)
+		{
+			capturingRow = null;
+			capture = null;
+		}
+		conflictRow = null;
+		conflictWith = null;
+		RefreshHotkeyRows();
+	}
+
+	// A key already used by another command isn't applied directly: the row shows the clash
+	// and the user picks Swap (the other command takes this one's old key) or Cancel.
+	private void AssignHotkey(HotkeyRow r, int vk)
+	{
+		conflictRow = null;
+		conflictWith = null;
+		if (vk != 0)
+		{
+			foreach (Hotkey other in Hotkey.All)
+			{
+				if (other != r.Hotkey && other.Get(profile) == vk)
+				{
+					conflictRow = r;
+					conflictVk = vk;
+					conflictWith = other;
+					RefreshHotkeyRows();
+					return;
+				}
+			}
+		}
+		r.Hotkey.Set(profile, vk);
+		HotkeysChanged();
+	}
+
+	private void SwapHotkeyConflict()
+	{
+		if (conflictRow != null)
+		{
+			conflictWith.Set(profile, conflictRow.Hotkey.Get(profile));
+			conflictRow.Hotkey.Set(profile, conflictVk);
+			conflictRow = null;
+			conflictWith = null;
+			HotkeysChanged();
+		}
+	}
+
+	private void RestoreDefaultHotkeys()
+	{
+		if (MessageBox.Show("Restore the default hotkeys for “" + profile.Name + "”?", "MouseYoke", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+		{
+			CancelHotkeyCapture();
+			foreach (Hotkey hk in Hotkey.All)
+			{
+				hk.Set(profile, hk.DefaultVk);
+			}
+			HotkeysChanged();
+		}
+	}
+
+	private void HotkeysChanged()
+	{
+		ReleaseHeldKeys();
+		SaveActiveProfile();
+		RefreshHotkeyUi();
+	}
+
+	// A held key's key-up is matched against the current bindings, so after a rebind or a
+	// profile switch it may never match again: drop every held state instead.
+	private void ReleaseHeldKeys()
+	{
+		trimUpHeld = (trimDnHeld = (trimLHeld = (trimRHeld = false)));
+		profile.RudderLeftHeld = false;
+		profile.RudderRightHeld = false;
+	}
+
+	private void RefreshHotkeyRows()
+	{
+		foreach (HotkeyRow r in hotkeyRows)
+		{
+			bool capturing = r == capturingRow;
+			bool conflict = r == conflictRow;
+			r.Key.Text = (capturing ? "Press a key…" : Profile.KeyName(conflict ? conflictVk : r.Hotkey.Get(profile)));
+			r.Key.BackColor = (capturing ? Color.FromArgb(45, 70, 110) : (conflict ? Color.FromArgb(58, 44, 30) : Color.FromArgb(45, 45, 55)));
+			r.Key.FlatAppearance.BorderSize = (conflict ? 1 : 0);
+			if (conflict)
+			{
+				r.ConflictText.Text = "⚠  " + Profile.KeyName(conflictVk) + " is already " + conflictWith.Label + ".";
+			}
+			r.ConflictBar.Visible = conflict;
+		}
+	}
+
+	private void RefreshHotkeyUi()
+	{
+		RefreshHotkeyRows();
+		lblHotkeyHelp.Text = Profile.KeyName(profile.ToggleVk) + " = fly / standby   •   " + Profile.KeyName(profile.TrimUpVk) + "/" + Profile.KeyName(profile.TrimDownVk) + " = pitch trim   •   " + Profile.KeyName(profile.TrimLeftVk) + "/" + Profile.KeyName(profile.TrimRightVk) + " = roll trim   •   " + Profile.KeyName(profile.TrimResetVk) + " = reset trim";
+		resetHint = ((profile.TrimResetVk == 0) ? "" : ("   (" + Profile.KeyName(profile.TrimResetVk) + " = reset)"));
+		UpdateToggleText();
+	}
+
+	private string ToggleKeyHint()
+	{
+		if (profile.ToggleVk != 0)
+		{
+			return "  (" + Profile.KeyName(profile.ToggleVk) + ")";
+		}
+		return "";
+	}
+
+	private void UpdateToggleText()
+	{
+		btnToggle.Text = (active ? "ACTIVE — Deactivate" : "Activate") + ToggleKeyHint();
 	}
 
 	private void RefreshProfileCombo()
@@ -756,9 +1064,10 @@ public class MainForm : Form
 		cbSelfCenter.Checked = profile.SelfCenter;
 		cbRudder.Checked = profile.RudderEnabled;
 		tbRudderRate.Value = Clamp(profile.RudderRatePct, 10, 200);
-		btnRudderL.Text = "Left:  " + Profile.KeyName(profile.RudderLeftVk);
-		btnRudderR.Text = "Right: " + Profile.KeyName(profile.RudderRightVk);
 		RebuildBindingRows();
+		ReleaseHeldKeys();
+		CancelHotkeyCapture();
+		RefreshHotkeyUi();
 		loading = false;
 	}
 
@@ -965,6 +1274,7 @@ public class MainForm : Form
 
 	private void BeginAddBinding()
 	{
+		CancelHotkeyCapture();
 		lblBindStatus.Text = "Press the key to bind...";
 		lblBindStatus.ForeColor = Color.LightGreen;
 		capture = (int vk) =>
@@ -1017,6 +1327,7 @@ public class MainForm : Form
 			keyBtn.Click += (object? s, EventArgs e) =>
 			{
 				ButtonBinding bb = (ButtonBinding)((Button)s).Tag;
+				CancelHotkeyCapture();
 				lblBindStatus.Text = "Press new key...";
 				capture = (int vk) =>
 				{
@@ -1105,24 +1416,33 @@ public class MainForm : Form
 			});
 			return;
 		}
-		switch (vk)
+		if (vk == profile.ToggleVk)
 		{
-		case 120:
 			ToggleActive();
 			return;
-		case 33:
+		}
+		if (vk == profile.TrimUpVk)
+		{
 			trimUpHeld = true;
 			return;
-		case 34:
+		}
+		if (vk == profile.TrimDownVk)
+		{
 			trimDnHeld = true;
 			return;
-		case 45:
+		}
+		if (vk == profile.TrimLeftVk)
+		{
 			trimLHeld = true;
 			return;
-		case 46:
+		}
+		if (vk == profile.TrimRightVk)
+		{
 			trimRHeld = true;
 			return;
-		case 36:
+		}
+		if (vk == profile.TrimResetVk)
+		{
 			pitchTrim = 0.0;
 			rollTrim = 0.0;
 			return;
@@ -1154,20 +1474,21 @@ public class MainForm : Form
 
 	private void OnKeyUp(int vk)
 	{
-		switch (vk)
+		if (vk == profile.TrimUpVk)
 		{
-		case 33:
 			trimUpHeld = false;
-			break;
-		case 34:
+		}
+		if (vk == profile.TrimDownVk)
+		{
 			trimDnHeld = false;
-			break;
-		case 45:
+		}
+		if (vk == profile.TrimLeftVk)
+		{
 			trimLHeld = false;
-			break;
-		case 46:
+		}
+		if (vk == profile.TrimRightVk)
+		{
 			trimRHeld = false;
-			break;
 		}
 		if (vk == profile.RudderLeftVk)
 		{
@@ -1202,6 +1523,8 @@ public class MainForm : Form
 		if (active)
 		{
 			Rectangle b = Screen.PrimaryScreen.Bounds;
+			flightScreen = b;
+			ConfineCursor();
 			SetCursorPos(b.Left + b.Width / 2, b.Top + b.Height / 2);
 			smoothX = (smoothY = 0.0);
 			springX = (springY = 0.0);
@@ -1214,21 +1537,46 @@ public class MainForm : Form
 			{
 				overlay.Visible = cbOverlay.Checked;
 			}
-			btnToggle.Text = "ACTIVE — Deactivate (F9)";
+			UpdateToggleText();
 			btnToggle.BackColor = Color.FromArgb(150, 40, 40);
-			SetStatus("Flying. Mouse = yoke. Trim holds attitude. F9 to release.", Color.LightGreen);
+			SetStatus("Flying. Mouse = yoke. Trim holds attitude." + ((profile.ToggleVk != 0) ? (" " + Profile.KeyName(profile.ToggleVk) + " to release.") : ""), Color.LightGreen);
 		}
 		else
 		{
 			CursorHider.Restore();
+			ReleaseCursor();
 			if (overlay != null && !cbMoveHud.Checked)
 			{
 				overlay.Visible = false;
 			}
-			btnToggle.Text = "Activate  (F9)";
+			UpdateToggleText();
 			btnToggle.BackColor = Color.FromArgb(40, 120, 90);
 			SetStatus("Standby. Trim holds; mouse free for cockpit.", Color.DarkGray);
 		}
+	}
+
+	// Keeps the cursor on the flight screen while active, so crossing onto another monitor
+	// can't flip the control from one extreme to the other. Windows or other apps may drop
+	// the clip (focus changes, Ctrl+Alt+Del...), so the loop re-asserts it every tick.
+	private void ConfineCursor()
+	{
+		GetClipCursor(out var cur);
+		if (cur.Left != flightScreen.Left || cur.Top != flightScreen.Top || cur.Right != flightScreen.Right || cur.Bottom != flightScreen.Bottom)
+		{
+			RECT r = new RECT
+			{
+				Left = flightScreen.Left,
+				Top = flightScreen.Top,
+				Right = flightScreen.Right,
+				Bottom = flightScreen.Bottom
+			};
+			ClipCursor(ref r);
+		}
+	}
+
+	private static void ReleaseCursor()
+	{
+		ClipCursor(IntPtr.Zero);
 	}
 
 	private void EnsureOverlay()
@@ -1247,11 +1595,21 @@ public class MainForm : Form
 
 	private void Loop_Tick(object sender, EventArgs e)
 	{
+		// WM_TIMER is rounded to the ~15.6 ms system tick (~64 Hz, not 100 Hz), so every rate is
+		// integrated over the real elapsed time. Capped so a UI stall can't cause a big jump.
+		double now = clock.Elapsed.TotalSeconds;
+		double dt = Math.Min(now - lastTick, 0.1);
+		lastTick = now;
+		hook.ReleaseStaleKeys();
 		if (!acquired)
 		{
 			return;
 		}
-		double trimStep = (double)tbTrimRate.Value / 100.0 * 0.01;
+		if (active)
+		{
+			ConfineCursor();
+		}
+		double trimStep = (double)tbTrimRate.Value / 100.0 * dt;
 		if (trimUpHeld)
 		{
 			pitchTrim = Clamp(pitchTrim - trimStep, -1.0, 1.0);
@@ -1272,7 +1630,7 @@ public class MainForm : Form
 		double mPitch = 0.0;
 		if (active && cbSelfCenter.Checked)
 		{
-			Rectangle ps = Screen.PrimaryScreen.Bounds;
+			Rectangle ps = flightScreen;
 			double dx;
 			double dy;
 			if (rawRegistered)
@@ -1292,7 +1650,7 @@ public class MainForm : Form
 			}
 			else
 			{
-				Rectangle scr = Screen.FromPoint(System.Windows.Forms.Cursor.Position).Bounds;
+				Rectangle scr = flightScreen;
 				int cxp = scr.Left + scr.Width / 2;
 				int cyp = scr.Top + scr.Height / 2;
 				Point cur = System.Windows.Forms.Cursor.Position;
@@ -1303,7 +1661,9 @@ public class MainForm : Form
 			double baseGain = (rawRegistered ? 0.03 : 0.015);
 			springX += dx * ((double)tbRollSens.Value / 100.0 * baseGain);
 			springY += dy * ((double)tbPitchSens.Value / 100.0 * baseGain);
-			double decay = Math.Min((double)tbCenterSpeed.Value / 100.0 * 0.01, 1.0);
+			// Spring and smoothing were tuned as per-10 ms-tick factors; compounding them over
+			// dt keeps the same feel at whatever rate the timer actually runs.
+			double decay = 1.0 - Math.Pow(1.0 - Math.Min((double)tbCenterSpeed.Value / 100.0 * 0.01, 1.0), dt * 100.0);
 			springX -= springX * decay;
 			springY -= springY * decay;
 			springX = Clamp(springX, -1.0, 1.0);
@@ -1326,7 +1686,7 @@ public class MainForm : Form
 		{
 			rawDX = 0;
 			rawDY = 0;
-			Rectangle scr2 = Screen.FromPoint(System.Windows.Forms.Cursor.Position).Bounds;
+			Rectangle scr2 = flightScreen;
 			double cx = (double)scr2.Left + (double)scr2.Width / 2.0;
 			double cy = (double)scr2.Top + (double)scr2.Height / 2.0;
 			double zoneRoll = 1.0 - (double)(tbRollSens.Value - 1) / 99.0 * 0.8;
@@ -1345,7 +1705,7 @@ public class MainForm : Form
 			{
 				ny = 0.0 - ny;
 			}
-			double a = 1.0 - (double)tbSmooth.Value / 100.0;
+			double a = 1.0 - Math.Pow((double)tbSmooth.Value / 100.0, dt * 100.0);
 			smoothX += (nx - smoothX) * a;
 			smoothY += (ny - smoothY) * a;
 			mRoll = smoothX;
@@ -1364,7 +1724,7 @@ public class MainForm : Form
 		VJoy.SetAxis(ToAxis(outPitch), 1u, 49u);
 		if (profile.RudderEnabled)
 		{
-			double rstep = (double)tbRudderRate.Value / 100.0 * 0.01;
+			double rstep = (double)tbRudderRate.Value / 100.0 * dt;
 			if (profile.RudderLeftHeld && !profile.RudderRightHeld)
 			{
 				profile.RudderValue = Clamp(profile.RudderValue - rstep, -1.0, 1.0);
@@ -1384,7 +1744,7 @@ public class MainForm : Form
 			VJoy.SetAxis(ToAxis(profile.RudderValue), 1u, 50u);
 		}
 		lblAxis.Text = $"Roll {outRoll,6:0.00}   Pitch {outPitch,6:0.00}" + (profile.RudderEnabled ? $"   Rudder {profile.RudderValue,5:0.00}" : "");
-		lblTrim.Text = $"Pitch trim {pitchTrim * 100.0,5:0.#}%   Roll trim {rollTrim * 100.0,5:0.#}%   (Home = reset)";
+		lblTrim.Text = $"Pitch trim {pitchTrim * 100.0,5:0.#}%   Roll trim {rollTrim * 100.0,5:0.#}%" + resetHint;
 		if (++frame % 3 != 0)
 		{
 			return;
@@ -1454,6 +1814,7 @@ public class MainForm : Form
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
 		CursorHider.Restore();
+		ReleaseCursor();
 		SaveActiveProfile();
 		hook.Dispose();
 		if (acquired)

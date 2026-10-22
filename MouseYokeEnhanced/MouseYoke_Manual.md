@@ -62,15 +62,43 @@ The app should say **"Ready. F9 to fly."** at the top.
 1. Keep MouseYoke open (on a second screen, or just behind the sim).
 2. Press **F9** to start flying with the mouse. Press **F9** again to stop (handy when you need to click buttons in the cockpit).
 
+While you're flying, the pointer stays on your main screen, so it can't slip onto another
+monitor and throw the controls to one side. Press **F9** to stop, and it's free again.
+
 ### Your keys
+
+These are the starting keys. You can change any of them (see **Changing your keys** below).
 
 - **F9** — start / stop mouse flying
 - **Page Up / Page Down** — trim the nose up or down (hold)
 - **Insert / Delete** — trim left or right (hold)
 - **Home** — reset trim to neutral
+- **Comma , / Period .** — rudder left or right (hold; only when keyboard rudder is on)
 
 Think of **trim** as "hold this attitude for me." Set your climb or descent, trim it in, and
 the plane holds it so you're not fighting the controls.
+
+The bottom of the **Flight** tab always shows the keys you're using right now.
+
+---
+
+## Changing your keys
+
+Open the **Hotkeys** tab. Every keyboard command is listed there.
+
+1. Click the key next to a command. It changes to **Press a key…**
+2. Press the key you want to use.
+
+- **Esc** cancels without changing anything.
+- **Backspace** leaves the command with no key ("Not set").
+- The **↺** button next to a command puts back its starting key.
+- **Restore defaults** puts back all the starting keys at once.
+
+If the key you press is already used by another command, the app tells you which one and
+asks what to do: **Swap** gives the other command your old key, **Cancel** keeps things as
+they were.
+
+Your keys are saved with the aircraft profile, so each plane can have its own.
 
 ---
 
@@ -108,9 +136,10 @@ nudge and see what feels good. Rough starting points:
 - **The on-screen HUD** — a little attitude circle that shows up while you're flying. Tick
   **Move HUD** to drag it anywhere you like, then untick to lock it in place. Untick **Show
   HUD** if you don't want it at all.
-- **Rudder on your keyboard** — on the **Key → vJoy** tab, tick **Keyboard rudder**, pick a
-  left key and a right key, and you get smooth rudder without a joystick. (Remember to bind
-  Rudder Axis in the sim, Step 4 above.)
+- **Rudder on your keyboard** — on the **Key → vJoy** tab, tick **Keyboard rudder** and you
+  get smooth rudder without a joystick. The rudder keys are **Comma ,** and **Period .** to
+  start with; change them on the **Hotkeys** tab. (Remember to bind Rudder Axis in the sim,
+  Step 4 above.)
 - **Extra buttons** — on the **Key → vJoy** tab you can map any key to a sim control (gear,
   flaps, brakes, autopilot…). Add a key, then bind that "button" in the sim's controls.
 
@@ -119,7 +148,7 @@ nudge and see what feels good. Rough starting points:
 ## Aircraft profiles
 
 Fly more than one plane? The bar at the top lets you save a **profile per aircraft** — each
-remembers its own feel and its own key setup.
+remembers its own feel, its own extra buttons and its own hotkeys.
 
 - **New** — start a fresh profile.
 - **Duplicate** — copy the current one as a starting point.
@@ -134,7 +163,13 @@ Everything saves automatically. Just pick your plane's profile from the dropdown
 - **The plane doesn't move in the sim.** Make sure MouseYoke is open and you pressed **F9**.
   Double-check you set the axes in Step 4, and that the sim is in windowed or borderless mode.
 - **My keys don't do anything.** Don't run Flight Simulator "as Administrator" — that stops
-  the app from seeing your keys. Just start it normally.
+  the app from seeing your keys. Just start it normally. Also check the **Hotkeys** tab: make
+  sure the command has a key (not "Not set") and that you picked the right aircraft profile.
+- **A key does two things at once.** If you use the same key on the **Hotkeys** tab and as an
+  extra button on the **Key → vJoy** tab, the hotkey wins (for the rudder keys, both happen).
+  Give one of them a different key.
+- **The pointer won't go to my other screen.** That's on purpose while you're flying. Press
+  **F9** to stop, and the pointer can go anywhere again.
 - **The rudder won't set up in the sim.** The rudder only appears while it's moving, so
   **hold** your rudder key at the moment the sim asks you to move an axis. Also make sure you
   ticked **Z** in vJoy (Step 2) and turned on **Keyboard rudder** in the app.

@@ -39,6 +39,18 @@ public class Profile
 
 	public int CenterSpeed { get; set; } = 120;
 
+	public int ToggleVk { get; set; } = 120;
+
+	public int TrimUpVk { get; set; } = 33;
+
+	public int TrimDownVk { get; set; } = 34;
+
+	public int TrimLeftVk { get; set; } = 45;
+
+	public int TrimRightVk { get; set; } = 46;
+
+	public int TrimResetVk { get; set; } = 36;
+
 	public List<ButtonBinding> Buttons { get; set; } = new List<ButtonBinding>();
 
 	public bool RudderEnabled { get; set; }
@@ -54,7 +66,18 @@ public class Profile
 		Keys k = (Keys)vk;
 		return k switch
 		{
-			Keys.Oemcomma => "Comma ,", 
+			Keys.None => "Not set",
+			Keys.PageUp => "Page Up",
+			Keys.PageDown => "Page Down",
+			Keys.Back => "Backspace",
+			Keys.Return => "Enter",
+			Keys.Capital => "Caps Lock",
+			>= Keys.D0 and <= Keys.D9 => ((char)vk).ToString(),
+			Keys.OemOpenBrackets => "Bracket [",
+			Keys.OemCloseBrackets => "Bracket ]",
+			Keys.OemPipe => "Backslash \\",
+			Keys.OemQuotes => "Quote '",
+			Keys.Oemcomma => "Comma ,",
 			Keys.OemPeriod => "Period .", 
 			Keys.OemQuestion => "Slash /", 
 			Keys.OemSemicolon => "Semicolon ;", 
