@@ -91,6 +91,8 @@ Open the **Hotkeys** tab. Every keyboard command is listed there.
 
 - **Esc** cancels without changing anything.
 - **Backspace** leaves the command with no key ("Not set").
+- The **×** button next to a command removes its key, which turns the command off. Click the
+  key again to give it a new one.
 - The **↺** button next to a command puts back its starting key.
 - **Restore defaults** puts back all the starting keys at once.
 

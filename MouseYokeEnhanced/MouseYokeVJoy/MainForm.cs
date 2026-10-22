@@ -83,6 +83,8 @@ public class MainForm : Form
 
 		public Button Key;
 
+		public Button Clear;
+
 		public Control ConflictBar;
 
 		public Label ConflictText;
@@ -735,7 +737,7 @@ public class MainForm : Form
 			AutoSize = true,
 			MaximumSize = new Size(430, 0),
 			ForeColor = Color.Silver,
-			Text = "Click a key to change it, then press the new key. Esc cancels, Backspace leaves the command unassigned."
+			Text = "Click a key to change it, then press the new key. Esc cancels. × or Backspace removes the key, turning the command off."
 		}, SizeType.AutoSize, 0, fill: false);
 		string group = null;
 		foreach (Hotkey hk in Hotkey.All)
@@ -808,7 +810,7 @@ public class MainForm : Form
 		};
 		TableLayoutPanel line = new TableLayoutPanel
 		{
-			ColumnCount = 3,
+			ColumnCount = 4,
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Dock = DockStyle.Fill,
@@ -817,6 +819,7 @@ public class MainForm : Form
 			ColumnStyles =
 			{
 				new ColumnStyle(SizeType.Percent, 100f),
+				new ColumnStyle(SizeType.AutoSize),
 				new ColumnStyle(SizeType.AutoSize),
 				new ColumnStyle(SizeType.AutoSize)
 			}
@@ -838,6 +841,19 @@ public class MainForm : Form
 			BeginHotkeyCapture(r);
 		};
 		line.Controls.Add(r.Key, 1, 0);
+		r.Clear = Styled("×", Color.FromArgb(30, 30, 38));
+		r.Clear.ForeColor = Color.DarkGray;
+		r.Clear.Font = new Font("Segoe UI", 11f);
+		r.Clear.Width = 28;
+		r.Clear.Height = 26;
+		r.Clear.Margin = new Padding(2, 3, 2, 3);
+		r.Clear.AccessibleName = "Remove the key for " + hk.Label;
+		r.Clear.Click += (object? s, EventArgs e) =>
+		{
+			CancelHotkeyCapture();
+			AssignHotkey(r, 0);
+		};
+		line.Controls.Add(r.Clear, 2, 0);
 		Button reset = Styled("↺", Color.FromArgb(30, 30, 38));
 		reset.ForeColor = Color.DarkGray;
 		reset.Width = 28;
@@ -849,7 +865,7 @@ public class MainForm : Form
 			CancelHotkeyCapture();
 			AssignHotkey(r, hk.DefaultVk);
 		};
-		line.Controls.Add(reset, 2, 0);
+		line.Controls.Add(reset, 3, 0);
 		box.Controls.Add(line, 0, 0);
 		TableLayoutPanel bar = new TableLayoutPanel
 		{
@@ -999,6 +1015,7 @@ public class MainForm : Form
 			r.Key.Text = (capturing ? "Press a key…" : Profile.KeyName(conflict ? conflictVk : r.Hotkey.Get(profile)));
 			r.Key.BackColor = (capturing ? Color.FromArgb(45, 70, 110) : (conflict ? Color.FromArgb(58, 44, 30) : Color.FromArgb(45, 45, 55)));
 			r.Key.FlatAppearance.BorderSize = (conflict ? 1 : 0);
+			r.Clear.Enabled = r.Hotkey.Get(profile) != 0;
 			if (conflict)
 			{
 				r.ConflictText.Text = "⚠  " + Profile.KeyName(conflictVk) + " is already " + conflictWith.Label + ".";
