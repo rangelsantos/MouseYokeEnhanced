@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="MouseYokeVJoy.app"/>
+
+  <!-- Run at the user's integrity level (no admin needed for vJoy or the keyboard hook,
+       as long as MSFS is NOT run as administrator). -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <!-- DPI awareness is configured in code via Application.SetHighDpiMode(PerMonitorV2)
+       in Program.cs, so it is intentionally NOT set here (avoids the WFAC010 warning). -->
+</assembly>

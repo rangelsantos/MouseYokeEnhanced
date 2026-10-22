@@ -1,0 +1,19 @@
+{
+  "Name": "Default",
+  "RollSens": 25,
+  "PitchSens": 45,
+  "Deadzone": 4,
+  "Expo": 40,
+  "Smoothing": 15,
+  "TrimRate": 25,
+  "InvertPitch": false,
+  "InvertRoll": false,
+  "HideCursor": false,
+  "SelfCenter": false,
+  "CenterSpeed": 120,
+  "Buttons": [],
+  "RudderEnabled": true,
+  "RudderLeftVk": 188,
+  "RudderRightVk": 190,
+  "RudderRatePct": 60
+}
