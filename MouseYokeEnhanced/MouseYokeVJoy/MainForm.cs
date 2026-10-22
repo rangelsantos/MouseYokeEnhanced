@@ -234,7 +234,7 @@ public class MainForm : Form
 
 	public MainForm()
 	{
-		Text = "MouseYoke — vJoy";
+		Text = "MouseYokeEnhanced — vJoy";
 		AutoScaleMode = AutoScaleMode.Font;
 		ClientSize = new Size(470, 720);
 		FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -979,7 +979,7 @@ public class MainForm : Form
 
 	private void RestoreDefaultHotkeys()
 	{
-		if (MessageBox.Show("Restore the default hotkeys for “" + profile.Name + "”?", "MouseYoke", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+		if (MessageBox.Show("Restore the default hotkeys for “" + profile.Name + "”?", "MouseYokeEnhanced", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 		{
 			CancelHotkeyCapture();
 			foreach (Hotkey hk in Hotkey.All)
@@ -1200,9 +1200,9 @@ public class MainForm : Form
 	{
 		if (ProfileManager.List().Count <= 1)
 		{
-			MessageBox.Show("You need at least one profile.", "MouseYoke", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			MessageBox.Show("You need at least one profile.", "MouseYokeEnhanced", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 		}
-		else if (MessageBox.Show("Delete profile “" + profile.Name + "”?", "MouseYoke", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
+		else if (MessageBox.Show("Delete profile “" + profile.Name + "”?", "MouseYokeEnhanced", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
 		{
 			ReleaseAllButtons();
 			ProfileManager.Delete(profile.Name);
