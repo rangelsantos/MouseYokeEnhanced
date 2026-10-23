@@ -1,23 +1,87 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace MouseYokeVJoy;
 
+// The click-through HUD. It is a per-pixel-alpha layered window (UpdateLayeredWindow), so the panel is truly
+// translucent: the old TransparencyKey approach blended the panel with the magenta key and tinted it purple.
 public class OverlayForm : Form
 {
-	private double roll;
+	private struct POINT
+	{
+		public int X;
 
-	private double pitch;
+		public int Y;
+	}
 
-	private double pitchTrim;
+	private struct SIZE
+	{
+		public int Cx;
 
-	private double rollTrim;
+		public int Cy;
+	}
 
-	private bool active;
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	private struct BLENDFUNCTION
+	{
+		public byte BlendOp;
+
+		public byte BlendFlags;
+
+		public byte SourceConstantAlpha;
+
+		public byte AlphaFormat;
+	}
+
+	private const int GWL_EXSTYLE = -20;
+
+	private const int WS_EX_TOPMOST = 0x8;
+
+	private const int WS_EX_TRANSPARENT = 0x20;
+
+	private const int WS_EX_TOOLWINDOW = 0x80;
+
+	private const int WS_EX_LAYERED = 0x80000;
+
+	private const int WS_EX_NOACTIVATE = 0x8000000;
+
+	private const int ULW_ALPHA = 2;
+
+	private const byte AC_SRC_ALPHA = 1;
+
+	public const int MinSizePercent = 50;
+
+	public const int MaxSizePercent = 250;
+
+	// Logical height of the "Drag to move · Done" bar shown under the HUD while positioning it.
+	private const int MoveBarHeight = 34;
+
+	private const int MoveMinWidth = 170;
+
+	private const int ToastMs = 1200;
+
+	private HudState state;
+
+	private HudStyle style;
+
+	private bool numbers = true;
+
+	private int opacity = 90;
+
+	private bool fadeEnabled;
+
+	private double fade = 1.0;
+
+	private string toast;
+
+	private long toastUntil;
 
 	private bool movable;
 
@@ -25,31 +89,31 @@ public class OverlayForm : Form
 
 	private Point dragStart;
 
-	private const int BaseSize = 260;
-
-	public const int MinSizePercent = 50;
-
-	public const int MaxSizePercent = 250;
+	private RectangleF doneRect;
 
 	private int sizePercent = 100;
 
+	private string lastFrame;
+
 	private float HudScale => (float)sizePercent / 100f;
 
-	private const int GWL_EXSTYLE = -20;
-
-	private const int WS_EX_TRANSPARENT = 32;
-
 	private static string PosPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "overlay.cfg");
+
+	public bool ToastActive => toast != null && Environment.TickCount64 < toastUntil;
+
+	protected override bool ShowWithoutActivation => true;
 
 	protected override CreateParams CreateParams
 	{
 		get
 		{
 			CreateParams createParams = base.CreateParams;
-			createParams.ExStyle |= 524448;
+			createParams.ExStyle |= WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOPMOST;
 			return createParams;
 		}
 	}
+
+	public event Action DoneClicked;
 
 	[DllImport("user32.dll")]
 	private static extern int GetWindowLong(nint hWnd, int nIndex);
@@ -57,32 +121,67 @@ public class OverlayForm : Form
 	[DllImport("user32.dll")]
 	private static extern int SetWindowLong(nint hWnd, int nIndex, int dwNewLong);
 
-	public OverlayForm()
+	[DllImport("user32.dll")]
+	private static extern nint GetDC(nint hWnd);
+
+	[DllImport("user32.dll")]
+	private static extern int ReleaseDC(nint hWnd, nint hDC);
+
+	[DllImport("gdi32.dll")]
+	private static extern nint CreateCompatibleDC(nint hDC);
+
+	[DllImport("gdi32.dll")]
+	private static extern bool DeleteDC(nint hdc);
+
+	[DllImport("gdi32.dll")]
+	private static extern nint SelectObject(nint hDC, nint hObject);
+
+	[DllImport("gdi32.dll")]
+	private static extern bool DeleteObject(nint hObject);
+
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern bool UpdateLayeredWindow(nint hwnd, nint hdcDst, ref POINT pptDst, ref SIZE psize, nint hdcSrc, ref POINT pptSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
+
+	// The style comes in here so the first size is already right: the saved position is the top-left
+	// corner, and resizing afterwards (which keeps the center) would shift the HUD on every start.
+	public OverlayForm(HudStyle style, bool numbers)
 	{
-		AutoScaleMode = AutoScaleMode.Font;
+		this.style = style;
+		this.numbers = numbers;
 		FormBorderStyle = FormBorderStyle.None;
 		ShowInTaskbar = false;
 		TopMost = true;
 		StartPosition = FormStartPosition.Manual;
 		sizePercent = LoadSizePercent();
 		Size = ScaledSize();
-		BackColor = Color.Magenta;
-		TransparencyKey = Color.Magenta;
-		Opacity = 0.92;
-		SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, value: true);
 		Location = LoadPosition() ?? DefaultLocation();
+	}
+
+	private Size HudLogicalSize => HudRenderer.LogicalSize(style, numbers);
+
+	private Size LogicalSize
+	{
+		get
+		{
+			Size s = HudLogicalSize;
+			if (!movable)
+			{
+				return s;
+			}
+			return new Size(Math.Max(s.Width, MoveMinWidth), s.Height + MoveBarHeight);
+		}
+	}
+
+	private Size ScaledSize()
+	{
+		Size s = LogicalSize;
+		return new Size((int)Math.Ceiling((float)s.Width * HudScale), (int)Math.Ceiling((float)s.Height * HudScale));
 	}
 
 	private Point DefaultLocation()
 	{
 		Rectangle scr = Screen.PrimaryScreen.Bounds;
 		return new Point(scr.Left + (scr.Width - Width) / 2, scr.Top + 40);
-	}
-
-	private Size ScaledSize()
-	{
-		int side = (int)Math.Round((float)BaseSize * HudScale);
-		return new Size(side, side);
 	}
 
 	// overlay.cfg is "x y [size%]"; files written before the size setting have only the position.
@@ -140,48 +239,249 @@ public class OverlayForm : Form
 		}
 	}
 
-	// Resizes around the current center (so the HUD stays where the user placed it), kept inside that screen.
+	// Applies a new size, either around the current center (size, style) or from the top-left corner
+	// (entering/leaving move mode, so the HUD doesn't jump), kept inside that screen.
+	private void Relayout(bool keepCenter)
+	{
+		Size sz = ScaledSize();
+		Point anchor = (keepCenter ? new Point(Location.X + Width / 2, Location.Y + Height / 2) : Location);
+		Rectangle scr = Screen.FromPoint(anchor).Bounds;
+		int x = (keepCenter ? (anchor.X - sz.Width / 2) : anchor.X);
+		int y = (keepCenter ? (anchor.Y - sz.Height / 2) : anchor.Y);
+		x = Math.Min(Math.Max(x, scr.Left), Math.Max(scr.Right - sz.Width, scr.Left));
+		y = Math.Min(Math.Max(y, scr.Top), Math.Max(scr.Bottom - sz.Height, scr.Top));
+		Bounds = new Rectangle(x, y, sz.Width, sz.Height);
+		Render(force: true);
+	}
+
 	public void SetSizePercent(int percent)
 	{
 		percent = Math.Min(Math.Max(percent, MinSizePercent), MaxSizePercent);
-		if (percent == sizePercent)
+		if (percent != sizePercent)
 		{
-			return;
+			sizePercent = percent;
+			Relayout(keepCenter: true);
+			SaveConfig();
 		}
-		Point center = new Point(Location.X + Width / 2, Location.Y + Height / 2);
-		sizePercent = percent;
-		Size sz = ScaledSize();
-		Rectangle scr = Screen.FromPoint(center).Bounds;
-		int x = Math.Min(Math.Max(center.X - sz.Width / 2, scr.Left), Math.Max(scr.Right - sz.Width, scr.Left));
-		int y = Math.Min(Math.Max(center.Y - sz.Height / 2, scr.Top), Math.Max(scr.Bottom - sz.Height, scr.Top));
-		Bounds = new Rectangle(x, y, sz.Width, sz.Height);
+	}
+
+	public void SetStyle(HudStyle style, bool numbers)
+	{
+		if (style != this.style || numbers != this.numbers)
+		{
+			this.style = style;
+			this.numbers = numbers;
+			Relayout(keepCenter: true);
+		}
+	}
+
+	public void SetOpacityPercent(int percent)
+	{
+		opacity = Math.Min(Math.Max(percent, 10), 100);
+		Render(force: true);
+	}
+
+	public void SetFade(bool on)
+	{
+		fadeEnabled = on;
+		if (!on)
+		{
+			fade = 1.0;
+		}
+		Render(force: true);
+	}
+
+	public void ResetPosition()
+	{
+		Location = DefaultLocation();
 		SaveConfig();
-		Invalidate();
+		Render(force: true);
 	}
 
 	public void SetMovable(bool on)
 	{
+		if (on == movable)
+		{
+			return;
+		}
 		movable = on;
+		dragging = false;
 		if (IsHandleCreated)
 		{
-			int ex = GetWindowLong(Handle, -20);
-			ex = ((!on) ? (ex | 0x20) : (ex & -33));
-			SetWindowLong(Handle, -20, ex);
+			int ex = GetWindowLong(Handle, GWL_EXSTYLE);
+			ex = ((!on) ? (ex | WS_EX_TRANSPARENT) : (ex & ~WS_EX_TRANSPARENT));
+			SetWindowLong(Handle, GWL_EXSTYLE, ex);
 		}
-		Opacity = (on ? 1.0 : 0.92);
+		Relayout(keepCenter: false);
 		if (!on)
 		{
 			SaveConfig();
 		}
-		Invalidate();
+	}
+
+	public void Toast(string text)
+	{
+		toast = text;
+		toastUntil = Environment.TickCount64 + ToastMs;
+		Render(force: true);
+	}
+
+	public void UpdateValues(HudState s)
+	{
+		state = s;
+		bool centered = Math.Abs(s.Roll - s.RollTrim) < 0.06 && Math.Abs(s.Pitch - s.PitchTrim) < 0.06;
+		double target = ((fadeEnabled && s.Active && centered && !movable) ? 0.35 : 1.0);
+		fade += (target - fade) * 0.25;
+		if (Math.Abs(target - fade) < 0.01)
+		{
+			fade = target;
+		}
+		Render(force: false);
+	}
+
+	protected override void OnPaintBackground(PaintEventArgs e)
+	{
+	}
+
+	protected override void OnVisibleChanged(EventArgs e)
+	{
+		base.OnVisibleChanged(e);
+		if (Visible)
+		{
+			Render(force: true);
+		}
+	}
+
+	private string FrameKey()
+	{
+		HudState s = state;
+		return string.Format(CultureInfo.InvariantCulture, "{0:F3}|{1:F3}|{2:F3}|{3:F3}|{4:F3}|{5}|{6}|{7}|{8:F2}|{9}|{10}", s.Roll, s.Pitch, s.Rudder, s.PitchTrim, s.RollTrim, s.Active, s.Spring, s.RudderOn, fade, ToastActive ? toast : "", s.ToggleKey);
+	}
+
+	private void Render(bool force)
+	{
+		if (!IsHandleCreated || !Visible)
+		{
+			return;
+		}
+		string key = FrameKey();
+		if (!force && key == lastFrame)
+		{
+			return;
+		}
+		lastFrame = key;
+		Size ls = LogicalSize;
+		Size hs = HudLogicalSize;
+		Size px = ScaledSize();
+		using Bitmap bmp = new Bitmap(px.Width, px.Height, PixelFormat.Format32bppArgb);
+		using (Graphics g = Graphics.FromImage(bmp))
+		{
+			g.SmoothingMode = SmoothingMode.AntiAlias;
+			g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+			g.Clear(Color.Transparent);
+			g.ScaleTransform(HudScale, HudScale);
+			if (movable)
+			{
+				DrawMoveFrame(g, ls, hs);
+			}
+			HudRenderer.Draw(g, style, state, numbers);
+			if (ToastActive)
+			{
+				HudRenderer.DrawToast(g, toast, hs);
+			}
+		}
+		byte alpha = (byte)(movable ? 255 : ((int)Math.Round(255.0 * (double)opacity / 100.0 * fade)));
+		Push(bmp, alpha);
+	}
+
+	// While positioning: a translucent fill (so the whole HUD can be grabbed), a dashed outline and a Done button.
+	private void DrawMoveFrame(Graphics g, Size ls, Size hs)
+	{
+		using (GraphicsPath p = HudRenderer.Rounded(new RectangleF(1f, 1f, hs.Width - 2, hs.Height - 2), 12f))
+		{
+			using SolidBrush fill = new SolidBrush(Color.FromArgb(110, 10, 13, 19));
+			using Pen edge = new Pen(Color.FromArgb(255, 90, 200, 255), 2f)
+			{
+				DashStyle = DashStyle.Dash
+			};
+			g.FillPath(fill, p);
+			g.DrawPath(edge, p);
+		}
+		using (GraphicsPath bar = HudRenderer.Rounded(new RectangleF(0f, hs.Height + 4, ls.Width, MoveBarHeight - 4), 8f))
+		{
+			using SolidBrush bb = new SolidBrush(Color.FromArgb(230, 22, 24, 30));
+			g.FillPath(bb, bar);
+		}
+		using Font f = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
+		using Font fb = new Font("Segoe UI Semibold", 11f, FontStyle.Regular, GraphicsUnit.Pixel);
+		using (SolidBrush tb = new SolidBrush(Color.FromArgb(220, 220, 228)))
+		{
+			g.DrawString("Drag to move", f, tb, 10f, (float)hs.Height + 12f);
+		}
+		doneRect = new RectangleF(ls.Width - 62, hs.Height + 9, 54f, MoveBarHeight - 14);
+		using (GraphicsPath db = HudRenderer.Rounded(doneRect, 4f))
+		{
+			using SolidBrush b = new SolidBrush(Theme.Blue);
+			g.FillPath(b, db);
+		}
+		using SolidBrush wb = new SolidBrush(Color.White);
+		using StringFormat center = new StringFormat
+		{
+			Alignment = StringAlignment.Center,
+			LineAlignment = StringAlignment.Center
+		};
+		g.DrawString("Done", fb, wb, doneRect, center);
+	}
+
+	private void Push(Bitmap bmp, byte alpha)
+	{
+		nint screen = GetDC(IntPtr.Zero);
+		nint mem = CreateCompatibleDC(screen);
+		nint hbmp = bmp.GetHbitmap(Color.FromArgb(0));
+		nint old = SelectObject(mem, hbmp);
+		try
+		{
+			POINT dst = new POINT
+			{
+				X = Left,
+				Y = Top
+			};
+			SIZE size = new SIZE
+			{
+				Cx = bmp.Width,
+				Cy = bmp.Height
+			};
+			POINT src = default(POINT);
+			BLENDFUNCTION blend = new BLENDFUNCTION
+			{
+				SourceConstantAlpha = alpha,
+				AlphaFormat = AC_SRC_ALPHA
+			};
+			UpdateLayeredWindow(Handle, screen, ref dst, ref size, mem, ref src, 0, ref blend, ULW_ALPHA);
+		}
+		finally
+		{
+			SelectObject(mem, old);
+			DeleteObject(hbmp);
+			DeleteDC(mem);
+			ReleaseDC(IntPtr.Zero, screen);
+		}
 	}
 
 	protected override void OnMouseDown(MouseEventArgs e)
 	{
 		if (movable && e.Button == MouseButtons.Left)
 		{
-			dragging = true;
-			dragStart = e.Location;
+			PointF p = new PointF((float)e.X / HudScale, (float)e.Y / HudScale);
+			if (doneRect.Contains(p))
+			{
+				this.DoneClicked?.Invoke();
+			}
+			else
+			{
+				dragging = true;
+				dragStart = e.Location;
+			}
 		}
 		base.OnMouseDown(e);
 	}
@@ -203,142 +503,5 @@ public class OverlayForm : Form
 			SaveConfig();
 		}
 		base.OnMouseUp(e);
-	}
-
-	public void UpdateValues(double roll, double pitch, double pitchTrim, double rollTrim, bool active)
-	{
-		this.roll = roll;
-		this.pitch = pitch;
-		this.pitchTrim = pitchTrim;
-		this.rollTrim = rollTrim;
-		this.active = active;
-		Invalidate();
-	}
-
-	protected override void OnPaint(PaintEventArgs e)
-	{
-		Graphics g = e.Graphics;
-		g.SmoothingMode = SmoothingMode.AntiAlias;
-		g.Clear(TransparencyKey);
-		// Everything below is laid out for the 260 px base size; the transform scales it as a whole.
-		g.ScaleTransform(HudScale, HudScale);
-		int w = (int)Math.Round((float)Width / HudScale);
-		int h = (int)Math.Round((float)Height / HudScale);
-		int pad = 12;
-		Rectangle panel = new Rectangle(pad, pad, w - pad * 2, h - pad * 2);
-		float cx = (float)panel.Left + (float)panel.Width / 2f;
-		float cy = (float)panel.Top + (float)panel.Height / 2f;
-		float r = (float)Math.Min(panel.Width, panel.Height) / 2f - 6f;
-		using (SolidBrush bg = new SolidBrush(Color.FromArgb(200, 12, 14, 20)))
-		{
-			using GraphicsPath path = Rounded(panel, 18);
-			g.FillPath(bg, path);
-		}
-		GraphicsPath clip = new GraphicsPath();
-		clip.AddEllipse(cx - r, cy - r, r * 2f, r * 2f);
-		GraphicsState clipState = g.Save();
-		g.SetClip(clip);
-		GraphicsState state = g.Save();
-		g.TranslateTransform(cx, cy + (float)(pitch * (double)r * 0.65));
-		g.RotateTransform((float)((0.0 - roll) * 45.0));
-		using (SolidBrush sky = new SolidBrush(Color.FromArgb(70, 60, 130, 200)))
-		{
-			g.FillRectangle(sky, (0f - r) * 1.6f, (0f - r) * 1.6f, r * 3.2f, r * 1.6f);
-		}
-		using (SolidBrush ground = new SolidBrush(Color.FromArgb(70, 120, 80, 40)))
-		{
-			g.FillRectangle(ground, (0f - r) * 1.6f, 0f, r * 3.2f, r * 1.6f);
-		}
-		using (Pen hz = new Pen(Color.FromArgb(220, 0, 220, 255), 1.6f))
-		{
-			g.DrawLine(hz, (0f - r) * 1.6f, 0f, r * 1.6f, 0f);
-		}
-		g.Restore(state);
-		g.Restore(clipState);
-		clip.Dispose();
-		using (Pen ring = new Pen(Color.FromArgb(120, 90, 150, 170), 1.4f))
-		{
-			g.DrawEllipse(ring, cx - r, cy - r, r * 2f, r * 2f);
-		}
-		using (Pen dz = new Pen(Color.FromArgb(70, 200, 200, 200), 1f)
-		{
-			DashStyle = DashStyle.Dot
-		})
-		{
-			g.DrawEllipse(dz, cx - r * 0.08f, cy - r * 0.08f, r * 0.16f, r * 0.16f);
-		}
-		using (Pen acp = new Pen(Color.FromArgb(255, 255, 255, 255), 2.2f))
-		{
-			g.DrawLine(acp, cx - 26f, cy, cx - 8f, cy);
-			g.DrawLine(acp, cx + 8f, cy, cx + 26f, cy);
-			g.DrawLine(acp, cx - 8f, cy, cx, cy + 7f);
-			g.DrawLine(acp, cx + 8f, cy, cx, cy + 7f);
-		}
-		float ty = cy + (float)(pitchTrim * (double)r);
-		using (Pen tp = new Pen(Color.FromArgb(255, 255, 190, 60), 2f))
-		{
-			g.DrawLine(tp, cx + r - 14f, ty, cx + r - 2f, ty);
-		}
-		float dx = cx + (float)(roll * (double)r);
-		float dy = cy + (float)(pitch * (double)r);
-		using (SolidBrush glow = new SolidBrush(Color.FromArgb(70, 120, 255, 140)))
-		{
-			g.FillEllipse(glow, dx - 11f, dy - 11f, 22f, 22f);
-		}
-		using (SolidBrush dot = new SolidBrush(Color.FromArgb(255, 120, 255, 140)))
-		{
-			g.FillEllipse(dot, dx - 5f, dy - 5f, 10f, 10f);
-		}
-		using (Font f = new Font("Segoe UI", 8f, FontStyle.Bold))
-		{
-			string bank;
-			if (Math.Abs(roll) < 0.03)
-			{
-				bank = "WINGS LVL";
-			}
-			else
-			{
-				bank = ((roll > 0.0) ? "BANK R" : "BANK L");
-			}
-			using (SolidBrush b = new SolidBrush(Color.FromArgb(230, 0, 220, 255)))
-			{
-				g.DrawString(bank, f, b, panel.Left + 8, panel.Bottom - 20);
-			}
-			using (SolidBrush b2 = new SolidBrush(active ? Color.FromArgb(230, 120, 255, 140) : Color.FromArgb(230, 200, 120, 120)))
-			{
-				string s = (active ? "ACTIVE" : "STANDBY");
-				SizeF sz = g.MeasureString(s, f);
-				g.DrawString(s, f, b2, (float)panel.Right - sz.Width - 8f, panel.Top + 4);
-			}
-			using SolidBrush b3 = new SolidBrush(Color.FromArgb(230, 255, 190, 60));
-			g.DrawString($"TRIM {pitchTrim * 100.0:+0;-0;0}", f, b3, panel.Left + 8, panel.Top + 4);
-		}
-		if (!movable)
-		{
-			return;
-		}
-		using (Pen mv = new Pen(Color.FromArgb(255, 90, 200, 255), 2.5f)
-		{
-			DashStyle = DashStyle.Dash
-		})
-		{
-			using GraphicsPath mpath = Rounded(new Rectangle(panel.Left, panel.Top, panel.Width, panel.Height), 18);
-			g.DrawPath(mv, mpath);
-		}
-		using Font f2 = new Font("Segoe UI", 8f, FontStyle.Bold);
-		using SolidBrush b4 = new SolidBrush(Color.FromArgb(240, 90, 200, 255));
-		string s2 = "drag to move";
-		g.DrawString(s2, f2, b4, cx - g.MeasureString(s2, f2).Width / 2f, panel.Bottom - 20);
-	}
-
-	private static GraphicsPath Rounded(Rectangle r, int rad)
-	{
-		GraphicsPath graphicsPath = new GraphicsPath();
-		graphicsPath.AddArc(r.X, r.Y, rad, rad, 180f, 90f);
-		graphicsPath.AddArc(r.Right - rad, r.Y, rad, rad, 270f, 90f);
-		graphicsPath.AddArc(r.Right - rad, r.Bottom - rad, rad, rad, 0f, 90f);
-		graphicsPath.AddArc(r.X, r.Bottom - rad, rad, rad, 90f, 90f);
-		graphicsPath.CloseFigure();
-		return graphicsPath;
 	}
 }

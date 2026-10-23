@@ -5,3 +5,6 @@ obj/
 # IDE
 .vs/
 *.user
+
+# Local design mockups (not pushed)
+design/

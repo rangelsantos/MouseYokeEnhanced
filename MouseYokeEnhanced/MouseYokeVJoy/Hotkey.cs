@@ -30,6 +30,9 @@ public sealed class Hotkey
 
 	public int DefaultVk => get(Defaults);
 
+	// Rudder keys work only while keyboard rudder is on, and they don't stop a vJoy button on the same key.
+	public bool IsRudder => Group == "RUDDER";
+
 	private Hotkey(string group, string label, Func<Profile, int> get, Action<Profile, int> set)
 	{
 		Group = group;

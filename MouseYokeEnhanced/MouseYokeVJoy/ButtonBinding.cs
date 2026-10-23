@@ -10,4 +10,7 @@ public class ButtonBinding
 	public int Vk { get; set; }
 
 	public int Button { get; set; }
+
+	// Optional name shown on the Keys tab ("Landing gear"); old profiles load with an empty one.
+	public string Label { get; set; } = "";
 }

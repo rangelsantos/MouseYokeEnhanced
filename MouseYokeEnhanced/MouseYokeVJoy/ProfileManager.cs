@@ -15,6 +15,8 @@ public static class ProfileManager
 
 	private static string Dir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Profiles");
 
+	public static string DirPath => Dir;
+
 	private static string ActiveFile => Path.Combine(Dir, "_active.txt");
 
 	public static void EnsureDir()
@@ -74,15 +76,71 @@ public static class ProfileManager
 		return null;
 	}
 
-	public static void Save(Profile prof)
+	public static bool Save(Profile prof)
 	{
-		EnsureDir();
 		try
 		{
+			EnsureDir();
 			File.WriteAllText(PathFor(prof.Name), JsonSerializer.Serialize(prof, Opts));
+			return true;
 		}
 		catch
 		{
+			return false;
+		}
+	}
+
+	public static bool Export(Profile prof, string path)
+	{
+		try
+		{
+			File.WriteAllText(path, JsonSerializer.Serialize(prof, Opts));
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	// Returns null when the file can't be read or isn't a profile. The caller picks the name.
+	public static Profile Import(string path)
+	{
+		try
+		{
+			return JsonSerializer.Deserialize<Profile>(File.ReadAllText(path));
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	// Saves the profile under its new name and removes the old file. A rename that only changes case
+	// ("cessna" to "Cessna") is the same file on Windows, so it goes through a temporary name instead.
+	public static bool Rename(Profile prof, string oldName)
+	{
+		try
+		{
+			string from = PathFor(oldName);
+			string to = PathFor(prof.Name);
+			if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase) && File.Exists(from))
+			{
+				string tmp = from + ".renaming";
+				File.Move(from, tmp, overwrite: true);
+				File.Move(tmp, to);
+				return Save(prof);
+			}
+			if (!Save(prof))
+			{
+				return false;
+			}
+			Delete(oldName);
+			return true;
+		}
+		catch
+		{
+			return false;
 		}
 	}
 
