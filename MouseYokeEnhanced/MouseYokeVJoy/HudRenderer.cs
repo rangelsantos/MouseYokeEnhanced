@@ -59,7 +59,7 @@ internal static class HudRenderer
 		{
 			HudStyle.Minimal => new Size(160, 160),
 			HudStyle.Strip => new Size(360, 58),
-			HudStyle.Classic => new Size(260, 260),
+			HudStyle.Classic => new Size(260, 284),
 			_ => new Size(240, numbers ? 280 : 260),
 		};
 	}
@@ -428,15 +428,17 @@ internal static class HudRenderer
 		Text(g, "R TRIM " + Percent(s.RollTrim), 12f, Theme.Amber, 266f, 43f);
 	}
 
-	// 260 x 260: the original HUD, now with roll trim and ROLL L/R instead of BANK (it shows the stick, not attitude).
+	// 260 x 284: the original HUD, now with roll trim and ROLL L/R instead of BANK (it shows the stick, not attitude),
+	// and a rudder ball under the ring, like the inclinometer of a turn coordinator.
 	private static void DrawClassic(Graphics g, HudState s)
 	{
 		float pad = 12f;
 		float pw = 236f;
+		float ph = 260f;
 		float cx = 130f;
 		float cy = 130f;
 		float r = 112f;
-		FillRounded(g, Color.FromArgb(200, 12, 14, 20), pad, pad, pw, pw, 18f);
+		FillRounded(g, Color.FromArgb(200, 12, 14, 20), pad, pad, pw, ph, 18f);
 		using (GraphicsPath clip = new GraphicsPath())
 		{
 			clip.AddEllipse(cx - r, cy - r, r * 2f, r * 2f);
@@ -484,9 +486,34 @@ internal static class HudRenderer
 		float dy = cy + (float)s.Pitch * r;
 		Dot(g, Color.FromArgb(70, 120, 255, 140), dx, dy, 11f);
 		Dot(g, s.Active ? Theme.Green : Color.FromArgb(190, 195, 200), dx, dy, 5f);
+		float ra = r + 14f;
+		float span = 22f;
+		RectangleF arc = new RectangleF(cx - ra, cy - ra, ra * 2f, ra * 2f);
+		using (Pen tube = new Pen(Color.FromArgb(34, 255, 255, 255), 11f)
+		{
+			StartCap = LineCap.Round,
+			EndCap = LineCap.Round
+		})
+		{
+			g.DrawArc(tube, arc, 90f - span, span * 2f);
+		}
+		using (Pen wire = new Pen(Color.FromArgb(150, 255, 255, 255), 1.2f))
+		{
+			g.DrawLine(wire, cx - 6.5f, cy + ra - 8f, cx - 6.5f, cy + ra + 8f);
+			g.DrawLine(wire, cx + 6.5f, cy + ra - 8f, cx + 6.5f, cy + ra + 8f);
+		}
+		double ba = (90.0 - Math.Clamp(s.Rudder, -1.0, 1.0) * (double)span) * Math.PI / 180.0;
+		float bx = cx + ra * (float)Math.Cos(ba);
+		float by = cy + ra * (float)Math.Sin(ba);
+		if (s.RudderOn && s.Active)
+		{
+			Dot(g, A(Theme.Cyan, 0.25), bx, by, 8.5f);
+		}
+		Dot(g, (!s.RudderOn) ? Color.FromArgb(90, 160, 168, 178) : (s.Active ? A(Theme.Cyan, 0.95) : Color.FromArgb(200, 160, 168, 178)), bx, by, 4.5f);
 		double off = s.Roll - s.RollTrim;
 		string roll = ((Math.Abs(off) < 0.03) ? "ROLL CTR" : ((off > 0.0) ? "ROLL R" : "ROLL L"));
-		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + pw - 10f);
+		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + ph - 10f);
+		Text(g, s.RudderOn ? ("RUD " + Percent(s.Rudder)) : "RUD OFF", 11f, s.RudderOn ? A(Theme.Cyan, 0.9) : Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
 		Text(g, s.Active ? "ACTIVE" : "STANDBY", 11f, s.Active ? A(Theme.Green, 0.9) : Color.FromArgb(230, 200, 120, 120), pad + pw - 8f, pad + 16f, StringAlignment.Far);
 		Text(g, "TRIM P " + Percent(s.PitchTrim) + " R " + Percent(s.RollTrim), 11f, A(Theme.Amber, 0.9), pad + 8f, pad + 16f);
 	}

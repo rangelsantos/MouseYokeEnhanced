@@ -184,7 +184,8 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
 
 - **Style** — **Sidestick** (the default: corner brackets for full travel, a green cross for the
   stick), **Minimal** (just the brackets and the cross), **Strip** (a thin bar for the edge of
-  the screen) or **Classic** (the original round display). The preview at the top shows it.
+  the screen) or **Classic** (the original round display, with a rudder ball underneath, like a
+  turn coordinator's). The preview at the top shows it.
 - **Size** (50–250%) and **Opacity**.
 - **Show HUD** — turn it off if you don't want a HUD at all (also on the Fly tab).
 - **Show numbers** — the trim and rudder values under the Sidestick HUD.
