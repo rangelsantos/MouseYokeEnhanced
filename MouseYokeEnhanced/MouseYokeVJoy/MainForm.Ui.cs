@@ -2225,7 +2225,7 @@ public partial class MainForm
 		tray = new NotifyIcon
 		{
 			Text = "MouseYokeEnhanced",
-			Icon = (Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application),
+			Icon = BrandIcon.Tray(active: false),
 			Visible = false
 		};
 		ContextMenuStrip m = DarkMenuRenderer.NewMenu();

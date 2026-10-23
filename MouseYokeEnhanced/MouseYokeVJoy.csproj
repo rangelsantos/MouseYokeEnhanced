@@ -14,8 +14,10 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Brand\MouseYoke.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Assets\Brand\MouseYoke.ico" LogicalName="MouseYoke.ico" />
     <None Include="..\MouseYoke\vJoyInterface.dll" Link="vJoyInterface.dll" CopyToOutputDirectory="PreserveNewest" />
     <None Include="MouseYoke_Manual.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

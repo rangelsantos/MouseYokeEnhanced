@@ -180,6 +180,7 @@ public partial class MainForm : Form
 	public MainForm()
 	{
 		Text = "MouseYokeEnhanced";
+		Icon = BrandIcon.Window(active: false);
 		AutoScaleMode = AutoScaleMode.Font;
 		ClientSize = new Size(FullWidth, FullHeight);
 		FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -710,6 +711,8 @@ public partial class MainForm : Form
 			SetStatus("Standby. Trim holds; mouse free for the cockpit.", Theme.Muted);
 		}
 		btnToggle.Flying = active;
+		Icon = BrandIcon.Window(active);
+		tray.Icon = BrandIcon.Tray(active);
 		RefreshCompact();
 		HudToast(active ? "ACTIVE" : "STANDBY");
 		UpdateOverlayVisibility();

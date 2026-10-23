@@ -11,8 +11,14 @@ The user writes in Portuguese (pt-BR). The app UI and the manual are in English;
 - `MouseYoke/` — the **original shipped binaries** (exe, dll, pdb, `vJoyInterface.dll`, manual). Reference
   only: never edit. The build copies `vJoyInterface.dll` from here.
 - `MouseYokeEnhanced/` — the source we work on (`MouseYokeVJoy.csproj`, code in `MouseYokeVJoy/`).
-- `README.md` — an **exact copy** of `MouseYokeEnhanced/MouseYoke_Manual.md`. When you change the manual,
-  copy it over (`cp MouseYokeEnhanced/MouseYoke_Manual.md README.md`). Both must stay UTF-8.
+- `README.md` — the GitHub presentation page (logo, screenshots, highlights, quick start). It is
+  **not** the manual: it links to `MouseYokeEnhanced/MouseYoke_Manual.md`, which is copied next to the
+  exe. When a feature changes, update the manual, and the README if it mentions it. Both UTF-8.
+- `docs/images/` — the README screenshots. Retake them after a visible UI change (see Build: a scratch
+  copy with a demo profile; park the window away from the real cursor so no tooltip shows).
+- `MouseYokeEnhanced/Assets/Brand/` — logo and icon PNGs (sources) and `MouseYoke.ico`, built from the
+  1024 px icon by `make-icon.ps1`. The `.ico` is the exe icon (`ApplicationIcon`) and an embedded
+  resource; rerun the script after changing the PNG.
 - `design/` — local, git-ignored mockups of the UI redesign (`redesign.html`). Never commit or publish it.
 
 ## Build
@@ -51,6 +57,7 @@ confines it to the primary monitor.
 | `HudRenderer.cs` | Draws the four HUD styles (`HudStyle`) from a `HudState`; shared by the overlay, the Fly monitor and the HUD preview |
 | `OverlayForm.cs` | Click-through HUD: per-pixel-alpha layered window (`UpdateLayeredWindow`), never activates; position mode with Done; notices |
 | `Theme.cs` | Palette and fonts |
+| `BrandIcon.cs` | Window and tray icons from the embedded `MouseYoke.ico`, and the "flying" variant with a red dot (set in `ToggleActive()`) |
 | `AppSettings.cs` | App-wide settings in `<exe>\settings.json` (HUD style/opacity/options, on top, tray, compact) |
 | `Profile.cs` / `ProfileManager.cs` | Per-aircraft settings, JSON files in `<exe>\Profiles\`, `_active.txt`; import/export, rename |
 | `Hotkey.cs` | The list of rebindable keyboard commands (`Hotkey.All`) |

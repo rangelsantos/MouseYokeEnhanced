@@ -207,7 +207,8 @@ At the bottom of the **HUD** tab:
 - **Always on top** — keeps the MouseYoke window above other windows.
 - **Close to tray** — closing the window keeps MouseYoke running (your keys keep working) with
   an icon next to the clock. Right-click the icon to show the window, start or stop flying, or
-  exit.
+  exit. While you're flying, the icon (next to the clock and on the taskbar) shows a small red
+  dot.
 - **Compact window** — shrinks MouseYoke to a small strip with just the essentials (flying or
   standby, the profile, the stick and the trim). Click **Expand** to get the full window back.
 
