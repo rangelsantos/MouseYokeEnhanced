@@ -7,7 +7,6 @@
 <p align="center">
   <img src="MouseYokeEnhanced/Assets/Brand/mouseyoke-enhanced-logo-512.png" width="240" alt="MouseYoke Enhanced">
 </p>
-
 <h3 align="center">Fly Microsoft Flight Simulator with your mouse — no joystick needed.</h3>
 
 <p align="center">

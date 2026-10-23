@@ -37,7 +37,7 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          last=$(git tag --list "v$MAJOR.*" | sed "s/^v$MAJOR\.//" | grep -E '^[0-9]+$' | sort -n | tail -1)
+          last=$(git tag --list "v$MAJOR.*" | sed "s/^v$MAJOR\.//" | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
           previous=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
           echo "version=$MAJOR.$(( ${last:--1} + 1 ))" >> "$GITHUB_OUTPUT"
           echo "previous=$previous" >> "$GITHUB_OUTPUT"
