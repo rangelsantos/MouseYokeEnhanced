@@ -166,6 +166,18 @@ public partial class MainForm
 
 	private Slider tbHudOpacity;
 
+	private Segmented segHudRudder;
+
+	private Segmented segHudPitchTrim;
+
+	private Segmented segHudRollTrim;
+
+	private Caption capHudRudder;
+
+	private Caption capHudPitchTrim;
+
+	private Caption capHudRollTrim;
+
 	private ToggleSwitch swShowHud;
 
 	private ToggleSwitch swHudNumbers;
@@ -1891,6 +1903,25 @@ public partial class MainForm
 			SaveSettingsSoon();
 		};
 		AddRow(t, ref row, card, SizeType.AutoSize, 0);
+		TableLayoutPanel elements = Card();
+		int er = 0;
+		AddRow(elements, ref er, Header("Elements"), SizeType.AutoSize, 0, fill: false, 6);
+		capHudRudder = new Caption();
+		segHudRudder = AddElementRow(elements, ref er, "Rudder", capHudRudder, (object? s, EventArgs e) =>
+		{
+			settings.HudRudder = (HudElementMode)segHudRudder.SelectedIndex;
+		});
+		capHudPitchTrim = new Caption();
+		segHudPitchTrim = AddElementRow(elements, ref er, "Pitch trim", capHudPitchTrim, (object? s, EventArgs e) =>
+		{
+			settings.HudPitchTrim = (HudElementMode)segHudPitchTrim.SelectedIndex;
+		});
+		capHudRollTrim = new Caption();
+		segHudRollTrim = AddElementRow(elements, ref er, "Roll trim", capHudRollTrim, (object? s, EventArgs e) =>
+		{
+			settings.HudRollTrim = (HudElementMode)segHudRollTrim.SelectedIndex;
+		});
+		AddRow(t, ref row, elements, SizeType.AutoSize, 0);
 		swShowHud = Switch("Show HUD", "while flying", (object? s, EventArgs e) =>
 		{
 			SetShowHud(swShowHud.Checked);
@@ -2003,6 +2034,84 @@ public partial class MainForm
 		SaveSettingsSoon();
 	}
 
+	// One optional HUD element: its name, a hint saying what it does now, and Auto | Show | Hide.
+	private Segmented AddElementRow(TableLayoutPanel t, ref int row, string name, Caption caption, EventHandler changed)
+	{
+		TableLayoutPanel line = new TableLayoutPanel
+		{
+			ColumnCount = 2,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			BackColor = t.BackColor,
+			Margin = new Padding(0, 0, 0, 4),
+			ColumnStyles =
+			{
+				new ColumnStyle(SizeType.Percent, 100f),
+				new ColumnStyle(SizeType.Absolute, 180f)
+			}
+		};
+		caption.Text = name;
+		caption.BackColor = t.BackColor;
+		caption.Dock = DockStyle.Fill;
+		caption.Margin = Padding.Empty;
+		Segmented seg = new Segmented
+		{
+			Items = new string[3] { "Auto", "Show", "Hide" },
+			Text = name + " on the HUD",
+			AccessibleName = name + " on the HUD",
+			Height = 28,
+			Anchor = (AnchorStyles.Left | AnchorStyles.Right),
+			Margin = Padding.Empty
+		};
+		seg.SelectedIndexChanged += changed;
+		seg.SelectedIndexChanged += (object? s, EventArgs e) =>
+		{
+			RefreshHudElementHints();
+			SaveSettingsSoon();
+		};
+		toolTip.SetToolTip(seg, "Auto shows it when this profile uses it");
+		line.Controls.Add(caption, 0, 0);
+		line.Controls.Add(seg, 1, 0);
+		AddRow(t, ref row, line, SizeType.AutoSize, 0, fill: true, 4);
+		return seg;
+	}
+
+	// The hints say what Auto does with the active profile right now, so a hidden element doesn't look like a bug.
+	private void RefreshHudElementHints()
+	{
+		string rudder = (RudderInUse ? ("Shown: " + Profile.KeyName(profile.RudderLeftVk) + " / " + Profile.KeyName(profile.RudderRightVk)) : (profile.RudderEnabled ? "Hidden: no rudder keys set" : "Hidden: keyboard rudder is off"));
+		SetHint(capHudRudder, ElementHint(settings.HudRudder, rudder));
+		SetHint(capHudPitchTrim, ElementHint(settings.HudPitchTrim, TrimHint(PitchTrimKeysSet, pitchTrim, profile.TrimUpVk, profile.TrimDownVk)));
+		SetHint(capHudRollTrim, ElementHint(settings.HudRollTrim, TrimHint(RollTrimKeysSet, rollTrim, profile.TrimLeftVk, profile.TrimRightVk)));
+	}
+
+	private static string ElementHint(HudElementMode mode, string auto)
+	{
+		return mode switch
+		{
+			HudElementMode.Show => "Always shown",
+			HudElementMode.Hide => "Always hidden",
+			_ => auto,
+		};
+	}
+
+	private static string TrimHint(bool keysSet, double trim, int vkA, int vkB)
+	{
+		if (keysSet)
+		{
+			return "Shown: " + Profile.KeyName(vkA) + " / " + Profile.KeyName(vkB);
+		}
+		return (trim != 0.0) ? ("Shown: still trimmed " + HudRenderer.Percent(trim)) : "Hidden: no trim keys set";
+	}
+
+	private static void SetHint(Caption c, string hint)
+	{
+		if (c.Hint != hint)
+		{
+			c.Hint = hint;
+		}
+	}
+
 	private void ConfigurePreview()
 	{
 		hudPreview.Configure(settings.HudStyle, settings.HudNumbers, settings.HudOpacity, tbHudSize.Value);
@@ -2018,6 +2127,10 @@ public partial class MainForm
 		swHudNumbers.Checked = settings.HudNumbers;
 		swHudFade.Checked = settings.HudFade;
 		swHudStandby.Checked = settings.HudInStandby;
+		segHudRudder.SelectedIndex = (int)settings.HudRudder;
+		segHudPitchTrim.SelectedIndex = (int)settings.HudPitchTrim;
+		segHudRollTrim.SelectedIndex = (int)settings.HudRollTrim;
+		RefreshHudElementHints();
 		swTopMost.Checked = settings.TopMost;
 		swTray.Checked = settings.CloseToTray;
 		TopMost = settings.TopMost;
@@ -2114,6 +2227,7 @@ public partial class MainForm
 			string note = ((!settings.ShowHud) ? "The HUD is off: turn on Show HUD" : ((!active && !settings.HudInStandby && !hudMoving) ? "Hidden in standby: turn on Show in standby" : ""));
 			bool centered = Math.Abs(st.Roll - st.RollTrim) < 0.06 && Math.Abs(st.Pitch - st.PitchTrim) < 0.06;
 			hudPreview.ShowFrame(st, (settings.HudFade && active && centered) ? 0.35 : 1.0, note);
+			RefreshHudElementHints();
 			break;
 		}
 		}

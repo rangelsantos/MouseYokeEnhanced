@@ -1382,7 +1382,7 @@ internal sealed class HudPreview : PaintedControl
 			}
 			g.ResetClip();
 		}
-		Size ls = HudRenderer.LogicalSize(style, numbers);
+		Size ls = HudRenderer.LogicalSize(style, numbers, state);
 		float baseWidth = style switch
 		{
 			HudStyle.Minimal => 80f,

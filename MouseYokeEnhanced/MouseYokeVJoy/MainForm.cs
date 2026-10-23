@@ -746,7 +746,7 @@ public partial class MainForm : Form
 	{
 		if (overlay == null || overlay.IsDisposed)
 		{
-			overlay = new OverlayForm(settings.HudStyle, settings.HudNumbers);
+			overlay = new OverlayForm(settings.HudStyle, settings.HudNumbers, CurrentHudState());
 			overlay.SetOpacityPercent(settings.HudOpacity);
 			overlay.SetFade(settings.HudFade);
 			overlay.DoneClicked += EndHudPosition;
@@ -825,8 +825,24 @@ public partial class MainForm : Form
 			Active = active,
 			Spring = SpringMode,
 			RudderOn = profile.RudderEnabled,
-			ToggleKey = ((profile.ToggleVk != 0) ? Profile.KeyName(profile.ToggleVk) : "")
+			ToggleKey = ((profile.ToggleVk != 0) ? Profile.KeyName(profile.ToggleVk) : ""),
+			ShowRudder = HudShows(settings.HudRudder, RudderInUse),
+			ShowPitchTrim = HudShows(settings.HudPitchTrim, PitchTrimKeysSet || pitchTrim != 0.0),
+			ShowRollTrim = HudShows(settings.HudRollTrim, RollTrimKeysSet || rollTrim != 0.0)
 		};
+	}
+
+	// What Auto looks at. A trim also counts while it is still applied, even with its keys unbound,
+	// so the HUD never hides an offset that is pulling the aircraft.
+	private bool RudderInUse => profile.RudderEnabled && (profile.RudderLeftVk != 0 || profile.RudderRightVk != 0);
+
+	private bool PitchTrimKeysSet => profile.TrimUpVk != 0 || profile.TrimDownVk != 0;
+
+	private bool RollTrimKeysSet => profile.TrimLeftVk != 0 || profile.TrimRightVk != 0;
+
+	private static bool HudShows(HudElementMode mode, bool inUse)
+	{
+		return mode == HudElementMode.Show || (mode == HudElementMode.Auto && inUse);
 	}
 
 	private void Loop_Tick(object sender, EventArgs e)

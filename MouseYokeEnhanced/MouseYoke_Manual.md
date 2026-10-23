@@ -187,6 +187,13 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
   the screen) or **Classic** (the original round display, with a rudder ball underneath, like a
   turn coordinator's). The preview at the top shows it.
 - **Size** (50–250%) and **Opacity**.
+- **Elements** — the rudder, the pitch trim and the roll trim each have **Auto**, **Show** or
+  **Hide**. **Auto** (the default) shows an element only when this aircraft uses it: the rudder
+  when **Keyboard rudder** is on, a trim when it has a key. A trim that is still applied stays on
+  the HUD even after you remove its keys. The HUD closes up around what's hidden, so it gets
+  smaller. **Show** always draws it (the rudder says **OFF** when it isn't on); **Hide** never
+  does. The line under each name says what Auto is doing right now. The stick picture on the Fly
+  tab always shows everything.
 - **Show HUD** — turn it off if you don't want a HUD at all (also on the Fly tab).
 - **Show numbers** — the trim and rudder values under the Sidestick HUD.
 - **Fade when centered** — the HUD dims while the stick is at rest, so it stays out of the way.

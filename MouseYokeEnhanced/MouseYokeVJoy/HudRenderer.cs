@@ -38,6 +38,13 @@ public struct HudState
 	public bool RudderOn;
 
 	public string ToggleKey;
+
+	// Which optional elements are drawn; the layout closes up around the hidden ones.
+	public bool ShowRudder;
+
+	public bool ShowPitchTrim;
+
+	public bool ShowRollTrim;
 }
 
 // Draws every HUD style in its own logical units; callers scale the Graphics to the size they want.
@@ -53,15 +60,81 @@ internal static class HudRenderer
 
 	public const int MonitorHeight = 250;
 
-	public static Size LogicalSize(HudStyle style, bool numbers)
+	// Depends on which optional elements are shown: a hidden one leaves no empty space.
+	public static Size LogicalSize(HudStyle style, bool numbers, HudState s)
 	{
 		return style switch
 		{
-			HudStyle.Minimal => new Size(160, 160),
-			HudStyle.Strip => new Size(360, 58),
-			HudStyle.Classic => new Size(260, 284),
-			_ => new Size(240, numbers ? 280 : 260),
+			HudStyle.Minimal => new Size(160, (int)MinimalHeight(s, out _)),
+			HudStyle.Strip => new Size((int)StripWidth(s, out _, out _), 58),
+			HudStyle.Classic => new Size(260, (int)ClassicPanelHeight(s) + 24),
+			_ => new Size(SidestickWidth(s), (int)SidestickRows(s, numbers, out _, out _, out _)),
 		};
+	}
+
+	// Without the pitch trim scale the box is centered (28 px on each side).
+	private static int SidestickWidth(HudState s)
+	{
+		return s.ShowPitchTrim ? 240 : 216;
+	}
+
+	private static bool SidestickNumbers(HudState s, bool numbers)
+	{
+		return numbers && (s.ShowRudder || s.ShowPitchTrim || s.ShowRollTrim);
+	}
+
+	// The rows under the stick box, packed in order: roll trim scale, rudder track, numbers. Returns the height.
+	private static float SidestickRows(HudState s, bool numbers, out float rollY, out float rudderY, out float numbersY)
+	{
+		float y = 200f;
+		rollY = y + 10f;
+		if (s.ShowRollTrim)
+		{
+			y += 18f;
+		}
+		rudderY = y + 10f;
+		if (s.ShowRudder)
+		{
+			y += 23f;
+		}
+		numbersY = y + 23f;
+		return y + (SidestickNumbers(s, numbers) ? 39f : 19f);
+	}
+
+	private static float MinimalHeight(HudState s, out float rudderY)
+	{
+		rudderY = (s.ShowRollTrim ? 152f : 146f);
+		return s.ShowRudder ? (rudderY + 8f) : (s.ShowRollTrim ? 148f : 142f);
+	}
+
+	private static float StripWidth(HudState s, out float rudderX, out float trimX)
+	{
+		float x = (s.ShowPitchTrim ? 140f : 134f);
+		rudderX = x + 10f;
+		if (s.ShowRudder)
+		{
+			x = rudderX + 100f;
+		}
+		trimX = x + 16f;
+		if (s.ShowPitchTrim || s.ShowRollTrim)
+		{
+			return trimX + 94f;
+		}
+		return x + (s.ShowRudder ? 16f : 10f);
+	}
+
+	// Without the rudder ball under the ring the panel ends just below the bottom labels.
+	private static float ClassicPanelHeight(HudState s)
+	{
+		return s.ShowRudder ? 260f : 246f;
+	}
+
+	// "P −14%   R +8%", only the trims that are shown.
+	private static string TrimText(HudState s, string gap)
+	{
+		string p = (s.ShowPitchTrim ? ("P " + Percent(s.PitchTrim)) : "");
+		string r = (s.ShowRollTrim ? ("R " + Percent(s.RollTrim)) : "");
+		return p + ((p.Length > 0 && r.Length > 0) ? gap : "") + r;
 	}
 
 	public static void Draw(Graphics g, HudStyle style, HudState s, bool numbers)
@@ -83,9 +156,11 @@ internal static class HudRenderer
 		}
 	}
 
-	// The Fly tab monitor: the sidestick drawing without panel or text, 240 x 250.
+	// The Fly tab monitor: the sidestick drawing without panel or text, 240 x 250. It always shows every
+	// element, so the user sees what can be set up even when the HUD hides it.
 	public static void DrawMonitor(Graphics g, HudState s)
 	{
+		s.ShowRudder = (s.ShowPitchTrim = (s.ShowRollTrim = true));
 		DrawSidestick(g, s, panel: false, labels: false, numbers: false);
 	}
 
@@ -266,13 +341,15 @@ internal static class HudRenderer
 		g.FillEllipse(b, x - r, y - r, r * 2f, r * 2f);
 	}
 
-	// 240 x 280 (260 without numbers). Inspired by the Airbus sidestick indicator: the brackets are full
-	// travel, the cross is the output, the amber pointers are the trims and the bottom bar is the rudder.
+	// 240 x 280 with everything shown (260 without numbers). Inspired by the Airbus sidestick indicator: the
+	// brackets are full travel, the cross is the output, the amber pointers are the trims and the bottom bar is the rudder.
 	private static void DrawSidestick(Graphics g, HudState s, bool panel, bool labels, bool numbers)
 	{
+		float width = SidestickWidth(s);
+		float height = SidestickRows(s, numbers, out var rollY, out var rudderY, out var numbersY);
 		if (panel)
 		{
-			using GraphicsPath p = Rounded(new RectangleF(4f, 4f, 232f, numbers ? 272 : 252), 14f);
+			using GraphicsPath p = Rounded(new RectangleF(4f, 4f, width - 8f, height - 8f), 14f);
 			using SolidBrush bg = new SolidBrush(Color.FromArgb(160, 10, 13, 19));
 			using Pen edge = new Pen(Color.FromArgb(18, 255, 255, 255), 1f);
 			g.FillPath(bg, p);
@@ -290,7 +367,7 @@ internal static class HudRenderer
 			Dot(g, tc, 22f, 22f, 3.5f);
 			string standby = (string.IsNullOrEmpty(s.ToggleKey) ? "STANDBY" : ("STANDBY · " + s.ToggleKey));
 			Text(g, s.Active ? "ACTIVE" : standby, 12f, tc, 32f, 26f);
-			Text(g, s.Spring ? "SPRING" : "DIRECT", 12f, A(Theme.Cyan, 0.85), 212f, 26f, StringAlignment.Far);
+			Text(g, s.Spring ? "SPRING" : "DIRECT", 12f, A(Theme.Cyan, 0.85), width - 28f, 26f, StringAlignment.Far);
 		}
 		using (Pen faint = new Pen(Color.FromArgb(41, 255, 255, 255), 1f)
 		{
@@ -312,46 +389,76 @@ internal static class HudRenderer
 		Brackets(g, x0, y0, size, 22f, FrameColor(s.Active), 2.2f);
 		using (Pen scale = new Pen(Color.FromArgb(77, 255, 255, 255), 1.2f))
 		{
-			g.DrawLine(scale, 200f, y0, 200f, y0 + size);
-			for (int i = 0; i <= 4; i++)
+			if (s.ShowPitchTrim)
 			{
-				float ty = y0 + (float)(i * 40);
-				g.DrawLine(scale, 200f, ty, (i == 2) ? 208f : 204f, ty);
+				g.DrawLine(scale, 200f, y0, 200f, y0 + size);
+				for (int i = 0; i <= 4; i++)
+				{
+					float ty = y0 + (float)(i * 40);
+					g.DrawLine(scale, 200f, ty, (i == 2) ? 208f : 204f, ty);
+				}
 			}
-			g.DrawLine(scale, x0, 210f, x0 + size, 210f);
-			for (int j = 0; j <= 4; j++)
+			if (s.ShowRollTrim)
 			{
-				float tx = x0 + (float)(j * 40);
-				g.DrawLine(scale, tx, 210f, tx, (j == 2) ? 202f : 206f);
+				g.DrawLine(scale, x0, rollY, x0 + size, rollY);
+				for (int j = 0; j <= 4; j++)
+				{
+					float tx = x0 + (float)(j * 40);
+					g.DrawLine(scale, tx, rollY, tx, rollY - ((j == 2) ? 8f : 4f));
+				}
 			}
 		}
-		Pointer(g, 203f, cy + (float)s.PitchTrim * h, left: true, 8f, Theme.Amber);
-		Pointer(g, cx + (float)s.RollTrim * h, 213f, left: false, 8f, Theme.Amber);
-		FillRounded(g, Color.FromArgb(26, 255, 255, 255), x0, 228f, size, 10f, 5f);
-		float rx = cx + (float)s.Rudder * h;
-		using (SolidBrush rb = new SolidBrush(s.Active ? A(Theme.Cyan, 0.75) : Color.FromArgb(128, 160, 168, 178)))
+		if (s.ShowPitchTrim)
 		{
-			g.FillRectangle(rb, Math.Min(cx, rx), 229f, Math.Abs(rx - cx), 8f);
+			Pointer(g, 203f, cy + (float)s.PitchTrim * h, left: true, 8f, Theme.Amber);
 		}
-		using (SolidBrush tick = new SolidBrush(Color.White))
+		if (s.ShowRollTrim)
 		{
-			g.FillRectangle(tick, cx - 0.75f, 225f, 1.5f, 16f);
+			Pointer(g, cx + (float)s.RollTrim * h, rollY + 3f, left: false, 8f, Theme.Amber);
 		}
-		Text(g, "RUD", 10f, Color.FromArgb(179, 220, 225, 230), 196f, 237f);
-		if (!s.RudderOn)
+		if (s.ShowRudder)
 		{
-			// Inside the right half of the empty track, clear of the roll trim pointer above the center.
-			Text(g, "OFF", 9f, Color.FromArgb(204, 220, 225, 230), cx + 44f, 236.5f, StringAlignment.Center);
+			FillRounded(g, Color.FromArgb(26, 255, 255, 255), x0, rudderY, size, 10f, 5f);
+			float rx = cx + (float)s.Rudder * h;
+			using (SolidBrush rb = new SolidBrush(s.Active ? A(Theme.Cyan, 0.75) : Color.FromArgb(128, 160, 168, 178)))
+			{
+				g.FillRectangle(rb, Math.Min(cx, rx), rudderY + 1f, Math.Abs(rx - cx), 8f);
+			}
+			using (SolidBrush tick = new SolidBrush(Color.White))
+			{
+				g.FillRectangle(tick, cx - 0.75f, rudderY - 3f, 1.5f, 16f);
+			}
+			if (s.ShowPitchTrim)
+			{
+				Text(g, "RUD", 10f, Color.FromArgb(179, 220, 225, 230), 196f, rudderY + 9f);
+			}
+			else
+			{
+				// No room right of the track in the narrow panel: the label goes inside its left end.
+				Text(g, "RUD", 9f, Color.FromArgb(204, 220, 225, 230), x0 + 6f, rudderY + 8.5f);
+			}
+			if (!s.RudderOn)
+			{
+				// Inside the right half of the empty track, clear of the roll trim pointer above the center.
+				Text(g, "OFF", 9f, Color.FromArgb(204, 220, 225, 230), cx + 44f, rudderY + 8.5f, StringAlignment.Center);
+			}
 		}
 		Cross(g, cx + (float)s.Roll * h, cy + (float)s.Pitch * h, 9f, MarkColor(s.Active), 2.6f);
-		if (numbers)
+		if (SidestickNumbers(s, numbers))
 		{
-			Text(g, "TRIM  P " + Percent(s.PitchTrim) + "   R " + Percent(s.RollTrim), 12f, Theme.Amber, 18f, 264f);
-			Text(g, "RUD " + Signed(s.Rudder), 12f, A(Theme.Cyan, 0.9), 222f, 264f, StringAlignment.Far);
+			string trim = TrimText(s, "   ");
+			if (trim.Length > 0)
+			{
+				Text(g, "TRIM  " + trim, 12f, Theme.Amber, 18f, numbersY);
+			}
+			if (s.ShowRudder)
+			{
+				Text(g, "RUD " + Signed(s.Rudder), 12f, A(Theme.Cyan, 0.9), width - 18f, numbersY, StringAlignment.Far);
+			}
 		}
 	}
 
-	// 160 x 160, no panel. Every mark is drawn twice, first as a dark offset copy, so it reads on a bright sky.
+	// 160 x 160 with everything shown, no panel. Every mark is drawn twice, first as a dark offset copy, so it reads on a bright sky.
 	private static void DrawMinimal(Graphics g, HudState s)
 	{
 		DrawMinimalLayer(g, s, shadow: true);
@@ -373,14 +480,24 @@ internal static class HudRenderer
 		{
 			Text(g, "STBY", 10f, shadow ? sh : TextColor(active: false), x0 + 8f + o, 20f + o);
 		}
-		Pointer(g, 137f + o, cy + (float)s.PitchTrim * h + o, left: true, 7f, shadow ? sh : Theme.Amber);
-		Pointer(g, cx + (float)s.RollTrim * h + o, 137f + o, left: false, 7f, shadow ? sh : Theme.Amber);
-		using (Pen line = new Pen(shadow ? sh : Color.FromArgb(128, 255, 255, 255), 1.2f))
+		if (s.ShowPitchTrim)
 		{
-			g.DrawLine(line, x0 + o, 152f + o, x0 + size + o, 152f + o);
-			g.DrawLine(line, cx + o, 148f + o, cx + o, 156f + o);
+			Pointer(g, 137f + o, cy + (float)s.PitchTrim * h + o, left: true, 7f, shadow ? sh : Theme.Amber);
 		}
-		Dot(g, shadow ? sh : FrameColor(s.Active), cx + (float)s.Rudder * h + o, 152f + o, 3f);
+		if (s.ShowRollTrim)
+		{
+			Pointer(g, cx + (float)s.RollTrim * h + o, 137f + o, left: false, 7f, shadow ? sh : Theme.Amber);
+		}
+		if (s.ShowRudder)
+		{
+			MinimalHeight(s, out var ry);
+			using (Pen line = new Pen(shadow ? sh : Color.FromArgb(128, 255, 255, 255), 1.2f))
+			{
+				g.DrawLine(line, x0 + o, ry + o, x0 + size + o, ry + o);
+				g.DrawLine(line, cx + o, ry - 4f + o, cx + o, ry + 4f + o);
+			}
+			Dot(g, shadow ? sh : FrameColor(s.Active), cx + (float)s.Rudder * h + o, ry + o, 3f);
+		}
 		if (shadow)
 		{
 			using Pen pen = new Pen(sh, 4.4f)
@@ -399,10 +516,11 @@ internal static class HudRenderer
 		}
 	}
 
-	// 360 x 58: a thin bar for a screen edge.
+	// 360 x 58 with everything shown: a thin bar for a screen edge. Hidden elements make it shorter.
 	private static void DrawStrip(Graphics g, HudState s)
 	{
-		FillRounded(g, Color.FromArgb(168, 10, 13, 19), 2f, 2f, 356f, 54f, 10f);
+		float width = StripWidth(s, out var rudX, out var trimX);
+		FillRounded(g, Color.FromArgb(168, 10, 13, 19), 2f, 2f, width - 4f, 54f, 10f);
 		Color tc = TextColor(s.Active);
 		Dot(g, tc, 16f, 29f, 3.5f);
 		Text(g, s.Active ? "ACTIVE" : "STBY", 12f, tc, 25f, 33f);
@@ -411,30 +529,45 @@ internal static class HudRenderer
 		float bc = bx + 21f;
 		float bcy = by + 21f;
 		Brackets(g, bx, by, 42f, 8f, FrameColor(s.Active), 1.8f);
-		Pointer(g, bx + 45f, bcy + (float)s.PitchTrim * 21f, left: true, 5f, Theme.Amber);
+		if (s.ShowPitchTrim)
+		{
+			Pointer(g, bx + 45f, bcy + (float)s.PitchTrim * 21f, left: true, 5f, Theme.Amber);
+		}
 		Cross(g, bc + (float)s.Roll * 21f, bcy + (float)s.Pitch * 21f, 5f, MarkColor(s.Active), 2f);
-		Text(g, s.RudderOn ? "RUD" : "RUD OFF", 10f, Color.FromArgb(179, 220, 225, 230), 150f, 24f);
-		FillRounded(g, Color.FromArgb(31, 255, 255, 255), 150f, 30f, 100f, 8f, 4f);
-		float rx = 200f + (float)s.Rudder * 50f;
-		using (SolidBrush rb = new SolidBrush(A(Theme.Cyan, 0.75)))
+		if (s.ShowRudder)
 		{
-			g.FillRectangle(rb, Math.Min(200f, rx), 31f, Math.Abs(rx - 200f), 6f);
+			float mid = rudX + 50f;
+			Text(g, s.RudderOn ? "RUD" : "RUD OFF", 10f, Color.FromArgb(179, 220, 225, 230), rudX, 24f);
+			FillRounded(g, Color.FromArgb(31, 255, 255, 255), rudX, 30f, 100f, 8f, 4f);
+			float rx = mid + (float)s.Rudder * 50f;
+			using (SolidBrush rb = new SolidBrush(A(Theme.Cyan, 0.75)))
+			{
+				g.FillRectangle(rb, Math.Min(mid, rx), 31f, Math.Abs(rx - mid), 6f);
+			}
+			using (SolidBrush tick = new SolidBrush(Color.White))
+			{
+				g.FillRectangle(tick, mid - 0.75f, 27f, 1.5f, 14f);
+			}
 		}
-		using (SolidBrush tick = new SolidBrush(Color.White))
+		// Two lines, or a single one centered when only one trim is shown.
+		if (s.ShowPitchTrim && s.ShowRollTrim)
 		{
-			g.FillRectangle(tick, 199.25f, 27f, 1.5f, 14f);
+			Text(g, "P TRIM " + Percent(s.PitchTrim), 12f, Theme.Amber, trimX, 25f);
+			Text(g, "R TRIM " + Percent(s.RollTrim), 12f, Theme.Amber, trimX, 43f);
 		}
-		Text(g, "P TRIM " + Percent(s.PitchTrim), 12f, Theme.Amber, 266f, 25f);
-		Text(g, "R TRIM " + Percent(s.RollTrim), 12f, Theme.Amber, 266f, 43f);
+		else if (s.ShowPitchTrim || s.ShowRollTrim)
+		{
+			Text(g, s.ShowPitchTrim ? ("P TRIM " + Percent(s.PitchTrim)) : ("R TRIM " + Percent(s.RollTrim)), 12f, Theme.Amber, trimX, 34f);
+		}
 	}
 
 	// 260 x 284: the original HUD, now with roll trim and ROLL L/R instead of BANK (it shows the stick, not attitude),
-	// and a rudder ball under the ring, like the inclinometer of a turn coordinator.
+	// and a rudder ball under the ring, like the inclinometer of a turn coordinator. 270 high without the rudder.
 	private static void DrawClassic(Graphics g, HudState s)
 	{
 		float pad = 12f;
 		float pw = 236f;
-		float ph = 260f;
+		float ph = ClassicPanelHeight(s);
 		float cx = 130f;
 		float cy = 130f;
 		float r = 112f;
@@ -477,44 +610,57 @@ internal static class HudRenderer
 		}
 		using (Pen tp = new Pen(Theme.Amber, 2f))
 		{
-			float ty = cy + (float)s.PitchTrim * r;
-			g.DrawLine(tp, cx + r - 14f, ty, cx + r - 2f, ty);
-			float tx = cx + (float)s.RollTrim * r;
-			g.DrawLine(tp, tx, cy + r - 14f, tx, cy + r - 2f);
+			if (s.ShowPitchTrim)
+			{
+				float ty = cy + (float)s.PitchTrim * r;
+				g.DrawLine(tp, cx + r - 14f, ty, cx + r - 2f, ty);
+			}
+			if (s.ShowRollTrim)
+			{
+				float tx = cx + (float)s.RollTrim * r;
+				g.DrawLine(tp, tx, cy + r - 14f, tx, cy + r - 2f);
+			}
 		}
 		float dx = cx + (float)s.Roll * r;
 		float dy = cy + (float)s.Pitch * r;
 		Dot(g, Color.FromArgb(70, 120, 255, 140), dx, dy, 11f);
 		Dot(g, s.Active ? Theme.Green : Color.FromArgb(190, 195, 200), dx, dy, 5f);
-		float ra = r + 14f;
-		float span = 22f;
-		RectangleF arc = new RectangleF(cx - ra, cy - ra, ra * 2f, ra * 2f);
-		using (Pen tube = new Pen(Color.FromArgb(34, 255, 255, 255), 11f)
+		if (s.ShowRudder)
 		{
-			StartCap = LineCap.Round,
-			EndCap = LineCap.Round
-		})
-		{
-			g.DrawArc(tube, arc, 90f - span, span * 2f);
+			float ra = r + 14f;
+			float span = 22f;
+			RectangleF arc = new RectangleF(cx - ra, cy - ra, ra * 2f, ra * 2f);
+			using (Pen tube = new Pen(Color.FromArgb(34, 255, 255, 255), 11f)
+			{
+				StartCap = LineCap.Round,
+				EndCap = LineCap.Round
+			})
+			{
+				g.DrawArc(tube, arc, 90f - span, span * 2f);
+			}
+			using (Pen wire = new Pen(Color.FromArgb(150, 255, 255, 255), 1.2f))
+			{
+				g.DrawLine(wire, cx - 6.5f, cy + ra - 8f, cx - 6.5f, cy + ra + 8f);
+				g.DrawLine(wire, cx + 6.5f, cy + ra - 8f, cx + 6.5f, cy + ra + 8f);
+			}
+			double ba = (90.0 - Math.Clamp(s.Rudder, -1.0, 1.0) * (double)span) * Math.PI / 180.0;
+			float bx = cx + ra * (float)Math.Cos(ba);
+			float by = cy + ra * (float)Math.Sin(ba);
+			if (s.RudderOn && s.Active)
+			{
+				Dot(g, A(Theme.Cyan, 0.25), bx, by, 8.5f);
+			}
+			Dot(g, (!s.RudderOn) ? Color.FromArgb(90, 160, 168, 178) : (s.Active ? A(Theme.Cyan, 0.95) : Color.FromArgb(200, 160, 168, 178)), bx, by, 4.5f);
+			Text(g, s.RudderOn ? ("RUD " + Percent(s.Rudder)) : "RUD OFF", 11f, s.RudderOn ? A(Theme.Cyan, 0.9) : Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
 		}
-		using (Pen wire = new Pen(Color.FromArgb(150, 255, 255, 255), 1.2f))
-		{
-			g.DrawLine(wire, cx - 6.5f, cy + ra - 8f, cx - 6.5f, cy + ra + 8f);
-			g.DrawLine(wire, cx + 6.5f, cy + ra - 8f, cx + 6.5f, cy + ra + 8f);
-		}
-		double ba = (90.0 - Math.Clamp(s.Rudder, -1.0, 1.0) * (double)span) * Math.PI / 180.0;
-		float bx = cx + ra * (float)Math.Cos(ba);
-		float by = cy + ra * (float)Math.Sin(ba);
-		if (s.RudderOn && s.Active)
-		{
-			Dot(g, A(Theme.Cyan, 0.25), bx, by, 8.5f);
-		}
-		Dot(g, (!s.RudderOn) ? Color.FromArgb(90, 160, 168, 178) : (s.Active ? A(Theme.Cyan, 0.95) : Color.FromArgb(200, 160, 168, 178)), bx, by, 4.5f);
 		double off = s.Roll - s.RollTrim;
 		string roll = ((Math.Abs(off) < 0.03) ? "ROLL CTR" : ((off > 0.0) ? "ROLL R" : "ROLL L"));
 		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + ph - 10f);
-		Text(g, s.RudderOn ? ("RUD " + Percent(s.Rudder)) : "RUD OFF", 11f, s.RudderOn ? A(Theme.Cyan, 0.9) : Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
 		Text(g, s.Active ? "ACTIVE" : "STANDBY", 11f, s.Active ? A(Theme.Green, 0.9) : Color.FromArgb(230, 200, 120, 120), pad + pw - 8f, pad + 16f, StringAlignment.Far);
-		Text(g, "TRIM P " + Percent(s.PitchTrim) + " R " + Percent(s.RollTrim), 11f, A(Theme.Amber, 0.9), pad + 8f, pad + 16f);
+		string trim = TrimText(s, " ");
+		if (trim.Length > 0)
+		{
+			Text(g, "TRIM " + trim, 11f, A(Theme.Amber, 0.9), pad + 8f, pad + 16f);
+		}
 	}
 }

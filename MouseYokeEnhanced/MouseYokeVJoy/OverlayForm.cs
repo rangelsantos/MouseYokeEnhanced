@@ -142,12 +142,14 @@ public class OverlayForm : Form
 	[DllImport("user32.dll", SetLastError = true)]
 	private static extern bool UpdateLayeredWindow(nint hwnd, nint hdcDst, ref POINT pptDst, ref SIZE psize, nint hdcSrc, ref POINT pptSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
 
-	// The style comes in here so the first size is already right: the saved position is the top-left
-	// corner, and resizing afterwards (which keeps the center) would shift the HUD on every start.
-	public OverlayForm(HudStyle style, bool numbers)
+	// The style (and the first state, which says what is shown) come in here so the first size is already
+	// right: the saved position is the top-left corner, and resizing afterwards (which keeps the center)
+	// would shift the HUD on every start.
+	public OverlayForm(HudStyle style, bool numbers, HudState state)
 	{
 		this.style = style;
 		this.numbers = numbers;
+		this.state = state;
 		FormBorderStyle = FormBorderStyle.None;
 		ShowInTaskbar = false;
 		TopMost = true;
@@ -157,7 +159,7 @@ public class OverlayForm : Form
 		Location = LoadPosition() ?? DefaultLocation();
 	}
 
-	private Size HudLogicalSize => HudRenderer.LogicalSize(style, numbers);
+	private Size HudLogicalSize => HudRenderer.LogicalSize(style, numbers, state);
 
 	private Size LogicalSize
 	{
@@ -240,7 +242,8 @@ public class OverlayForm : Form
 	}
 
 	// Applies a new size, either around the current center (size, style) or from the top-left corner
-	// (entering/leaving move mode, so the HUD doesn't jump), kept inside that screen.
+	// (entering/leaving move mode, so the HUD doesn't jump; an element shown or hidden, so the saved
+	// corner stays right whatever the profile), kept inside that screen.
 	private void Relayout(bool keepCenter)
 	{
 		Size sz = ScaledSize();
@@ -328,7 +331,12 @@ public class OverlayForm : Form
 
 	public void UpdateValues(HudState s)
 	{
+		Size before = HudLogicalSize;
 		state = s;
+		if (HudLogicalSize != before)
+		{
+			Relayout(keepCenter: false);
+		}
 		bool centered = Math.Abs(s.Roll - s.RollTrim) < 0.06 && Math.Abs(s.Pitch - s.PitchTrim) < 0.06;
 		double target = ((fadeEnabled && s.Active && centered && !movable) ? 0.35 : 1.0);
 		fade += (target - fade) * 0.25;
@@ -355,7 +363,7 @@ public class OverlayForm : Form
 	private string FrameKey()
 	{
 		HudState s = state;
-		return string.Format(CultureInfo.InvariantCulture, "{0:F3}|{1:F3}|{2:F3}|{3:F3}|{4:F3}|{5}|{6}|{7}|{8:F2}|{9}|{10}", s.Roll, s.Pitch, s.Rudder, s.PitchTrim, s.RollTrim, s.Active, s.Spring, s.RudderOn, fade, ToastActive ? toast : "", s.ToggleKey);
+		return string.Format(CultureInfo.InvariantCulture, "{0:F3}|{1:F3}|{2:F3}|{3:F3}|{4:F3}|{5}|{6}|{7}|{8:F2}|{9}|{10}|{11}{12}{13}", s.Roll, s.Pitch, s.Rudder, s.PitchTrim, s.RollTrim, s.Active, s.Spring, s.RudderOn, fade, ToastActive ? toast : "", s.ToggleKey, s.ShowRudder, s.ShowPitchTrim, s.ShowRollTrim);
 	}
 
 	private void Render(bool force)

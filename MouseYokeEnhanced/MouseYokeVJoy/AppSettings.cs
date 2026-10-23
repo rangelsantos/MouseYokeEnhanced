@@ -5,6 +5,14 @@ using System.Text.Json.Serialization;
 
 namespace MouseYokeVJoy;
 
+// Whether a HUD element (rudder, pitch trim, roll trim) is drawn. Auto draws it when the active profile uses it.
+public enum HudElementMode
+{
+	Auto,
+	Show,
+	Hide
+}
+
 // App-wide settings, the same for every aircraft profile. HUD position and size stay in overlay.cfg.
 public class AppSettings
 {
@@ -27,6 +35,12 @@ public class AppSettings
 	public bool HudFade { get; set; }
 
 	public bool HudInStandby { get; set; }
+
+	public HudElementMode HudRudder { get; set; } = HudElementMode.Auto;
+
+	public HudElementMode HudPitchTrim { get; set; } = HudElementMode.Auto;
+
+	public HudElementMode HudRollTrim { get; set; } = HudElementMode.Auto;
 
 	public bool TopMost { get; set; } = true;
 

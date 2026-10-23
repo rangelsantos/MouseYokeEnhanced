@@ -91,7 +91,8 @@ button number and name it. Then bind that button in the sim's controls.
 
 A small click-through display drawn over Flight Simulator: stick position, trim, rudder and
 whether you're **ACTIVE** or in **STANDBY**. Choose the style, size and opacity, then drag it
-wherever you like with **Position HUD…**.
+wherever you like with **Position HUD…**. Rudder and trim indicators only appear when the
+aircraft uses them, or you can show or hide each one yourself.
 
 It also flashes **ACTIVE**, **STANDBY** or **TRIM RESET** when you press the keys, so you know
 it worked even with the window hidden behind the sim.
