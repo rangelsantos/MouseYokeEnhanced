@@ -243,6 +243,17 @@ before you fly.
 
 ---
 
+## Updating to a new version
+
+New versions (v1.0, v1.1…) are on the
+**[Releases page](https://github.com/rangelsantos/MouseYokeEnhanced/releases/latest)**. Download
+`MouseYokeEnhanced-v<version>.zip`, close MouseYoke (right-click the tray icon → Exit if it's in
+the tray), and unzip it over your old **MouseYokeEnhanced** folder, replacing the files. Your
+profiles and settings are kept: they live in that folder and the zip doesn't include any. To see
+which version you have, right-click `MouseYokeVJoy.exe` → **Properties** → **Details**.
+
+---
+
 ## Quick fixes
 
 - **The plane doesn't move in the sim.** Make sure MouseYoke is open and you pressed **F9**.

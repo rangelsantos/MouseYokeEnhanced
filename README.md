@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="MouseYokeEnhanced/Assets/Brand/mouseyoke-enhanced-logo-512.png" width="240" alt="MouseYoke Enhanced">
-</p>
-
-<h3 align="center">Fly Microsoft Flight Simulator with your mouse — no joystick needed.</h3>
-
-<p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-2b2b33?logo=windows" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/.NET-8%20Desktop-5a9ad6?logo=dotnet" alt=".NET 8 Desktop">
   <img src="https://img.shields.io/badge/needs-vJoy-5a9ad6" alt="Needs vJoy">
 </p>
+
+<p align="center">
+  <img src="MouseYokeEnhanced/Assets/Brand/mouseyoke-enhanced-logo-512.png" width="240" alt="MouseYoke Enhanced">
+</p>
+
+<h3 align="center">Fly Microsoft Flight Simulator with your mouse — no joystick needed.</h3>
 
 <p align="center">
   <img src="docs/images/fly.png" width="380" alt="MouseYoke Enhanced, Fly tab">
@@ -158,8 +158,11 @@ MouseYoke can't see your keys.
 
 ## Download
 
-Get a build from the [Releases](https://github.com/rangelsantos/MouseYokeEnhanced/releases) page
-when one is published, or build it yourself:
+Download `MouseYokeEnhanced-v<version>.zip` from the
+[latest release](https://github.com/rangelsantos/MouseYokeEnhanced/releases/latest). A new version
+(v1.0, v1.1...) is built automatically from every push to `main`. Unzip it and run
+`MouseYokeVJoy.exe`. To update, unzip the new version over the old folder: your profiles and
+settings are kept. Or build it yourself:
 
 ```powershell
 dotnet build MouseYokeEnhanced\MouseYokeVJoy.csproj -c Release

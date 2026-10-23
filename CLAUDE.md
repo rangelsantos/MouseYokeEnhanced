@@ -19,6 +19,12 @@ The user writes in Portuguese (pt-BR). The app UI and the manual are in English;
 - `MouseYokeEnhanced/Assets/Brand/` — logo and icon PNGs (sources) and `MouseYoke.ico`, built from the
   1024 px icon by `make-icon.ps1`. The `.ico` is the exe icon (`ApplicationIcon`) and an embedded
   resource; rerun the script after changing the PNG.
+- `.github/workflows/release.yml` — on every push to `main`, publishes `MouseYokeEnhanced/` as a new
+  GitHub release `v<MAJOR>.<n>` (from v1.0; `MAJOR` is set in the workflow) with
+  `MouseYokeEnhanced-v<MAJOR>.<n>.zip` and the commits since the last tag as notes. Inside the zip the
+  folder is always `MouseYokeEnhanced\`, so unzipping a new version over an old one keeps its profiles. It stamps that version into `AssemblyInfo.cs` in CI only
+  (the file keeps `1.0.0` in git). The original `MouseYoke/` binaries are never released; only
+  `vJoyInterface.dll` comes along. The README links to the `releases/latest` page.
 - `design/` — local, git-ignored mockups of the UI redesign (`redesign.html`). Never commit or publish it.
 
 ## Build
