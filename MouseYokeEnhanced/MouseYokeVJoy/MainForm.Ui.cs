@@ -108,6 +108,8 @@ public partial class MainForm
 
 	private Segmented segMode;
 
+	private ToggleSwitch swHoldPosition;
+
 	private Label lblModeHelp;
 
 	private CurveView curve;
@@ -1005,11 +1007,11 @@ public partial class MainForm
 		segMode.SelectedIndexChanged += (object? s, EventArgs e) =>
 		{
 			SaveActiveProfile();
-			springX = (springY = 0.0);
-			if (active)
+			// Each mode keeps its own stick state, so a switch starts again from center.
+			ResetStick();
+			if (active && !freelook)
 			{
-				Rectangle bounds = Screen.PrimaryScreen.Bounds;
-				SetCursorPos(bounds.Left + bounds.Width / 2, bounds.Top + bounds.Height / 2);
+				PlaceCursor();
 			}
 			UpdateModeUi();
 		};
@@ -1024,6 +1026,12 @@ public partial class MainForm
 		};
 		AddRow(modeCard, ref mr, lblModeHelp, SizeType.AutoSize, 0, fill: false, 0);
 		AddRow(t, ref row, modeCard, SizeType.AutoSize, 0);
+		swHoldPosition = Switch("Hold stick position", "when you start or stop flying, no jump", (object? s, EventArgs e) =>
+		{
+			SaveActiveProfile();
+		});
+		swHoldPosition.Margin = new Padding(0, 0, 0, 8);
+		AddRow(t, ref row, swHoldPosition, SizeType.AutoSize, 0);
 		TableLayoutPanel curveCard = Card(6);
 		int cr = 0;
 		curve = new CurveView
@@ -1201,7 +1209,7 @@ public partial class MainForm
 		};
 		bottom.Controls.Add(new Label
 		{
-			Text = "Esc cancels · Backspace clears · saved with this profile",
+			Text = "Esc cancels · Backspace clears · mouse buttons work too",
 			ForeColor = Theme.Muted,
 			Font = Theme.Small,
 			AutoSize = true,
@@ -1453,6 +1461,7 @@ public partial class MainForm
 		trimUpHeld = (trimDnHeld = (trimLHeld = (trimRHeld = false)));
 		profile.RudderLeftHeld = false;
 		profile.RudderRightHeld = false;
+		SetFreelook(on: false);
 	}
 
 	// What OnKeyDown does with a key that is both a command and a vJoy button: the command runs and
@@ -1535,6 +1544,13 @@ public partial class MainForm
 		btnToggle.KeyText = ((profile.ToggleVk != 0) ? Profile.KeyName(profile.ToggleVk) : "");
 		List<List<(string, bool)>> lines = new List<List<(string, bool)>>();
 		AddLegend(lines, "Fly / standby", profile.ToggleVk);
+		List<(string, bool)> look = new List<(string, bool)>();
+		AddLegendItems(look, "Freelook", profile.FreelookVk);
+		AddLegendItems(look, "Center", profile.CenterVk);
+		if (look.Count > 0)
+		{
+			lines.Add(look);
+		}
 		AddLegend(lines, "Pitch trim", profile.TrimUpVk, profile.TrimDownVk);
 		List<(string, bool)> roll = new List<(string, bool)>();
 		AddLegendItems(roll, "Roll trim", profile.TrimLeftVk, profile.TrimRightVk);
@@ -2157,6 +2173,7 @@ public partial class MainForm
 		cbInvertRoll.Checked = profile.InvertRoll;
 		swHideCursor.Checked = profile.HideCursor;
 		segMode.SelectedIndex = (profile.SelfCenter ? 1 : 0);
+		swHoldPosition.Checked = profile.HoldPosition;
 		swRudder.Checked = profile.RudderEnabled;
 		tbRudderRate.Value = profile.RudderRatePct;
 		RebuildBindingRows();

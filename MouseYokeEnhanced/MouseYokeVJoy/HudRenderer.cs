@@ -33,6 +33,9 @@ public struct HudState
 
 	public bool Active;
 
+	// Flying, but the freelook key is held: the stick holds and the mouse is free.
+	public bool Freelook;
+
 	public bool Spring;
 
 	public bool RudderOn;
@@ -366,7 +369,7 @@ internal static class HudRenderer
 			Color tc = TextColor(s.Active);
 			Dot(g, tc, 22f, 22f, 3.5f);
 			string standby = (string.IsNullOrEmpty(s.ToggleKey) ? "STANDBY" : ("STANDBY · " + s.ToggleKey));
-			Text(g, s.Active ? "ACTIVE" : standby, 12f, tc, 32f, 26f);
+			Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : standby), 12f, tc, 32f, 26f);
 			Text(g, s.Spring ? "SPRING" : "DIRECT", 12f, A(Theme.Cyan, 0.85), width - 28f, 26f, StringAlignment.Far);
 		}
 		using (Pen faint = new Pen(Color.FromArgb(41, 255, 255, 255), 1f)
@@ -478,7 +481,7 @@ internal static class HudRenderer
 		Dot(g, shadow ? sh : TextColor(s.Active), x0 + o, 16f + o, 3.5f);
 		if (!s.Active)
 		{
-			Text(g, "STBY", 10f, shadow ? sh : TextColor(active: false), x0 + 8f + o, 20f + o);
+			Text(g, s.Freelook ? "LOOK" : "STBY", 10f, shadow ? sh : TextColor(active: false), x0 + 8f + o, 20f + o);
 		}
 		if (s.ShowPitchTrim)
 		{
@@ -523,7 +526,7 @@ internal static class HudRenderer
 		FillRounded(g, Color.FromArgb(168, 10, 13, 19), 2f, 2f, width - 4f, 54f, 10f);
 		Color tc = TextColor(s.Active);
 		Dot(g, tc, 16f, 29f, 3.5f);
-		Text(g, s.Active ? "ACTIVE" : "STBY", 12f, tc, 25f, 33f);
+		Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "LOOK" : "STBY"), 12f, tc, 25f, 33f);
 		float bx = 86f;
 		float by = 8f;
 		float bc = bx + 21f;
@@ -656,7 +659,7 @@ internal static class HudRenderer
 		double off = s.Roll - s.RollTrim;
 		string roll = ((Math.Abs(off) < 0.03) ? "ROLL CTR" : ((off > 0.0) ? "ROLL R" : "ROLL L"));
 		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + ph - 10f);
-		Text(g, s.Active ? "ACTIVE" : "STANDBY", 11f, s.Active ? A(Theme.Green, 0.9) : Color.FromArgb(230, 200, 120, 120), pad + pw - 8f, pad + 16f, StringAlignment.Far);
+		Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : "STANDBY"), 11f, s.Active ? A(Theme.Green, 0.9) : (s.Freelook ? TextColor(active: false) : Color.FromArgb(230, 200, 120, 120)), pad + pw - 8f, pad + 16f, StringAlignment.Far);
 		string trim = TrimText(s, " ");
 		if (trim.Length > 0)
 		{

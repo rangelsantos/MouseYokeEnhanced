@@ -67,7 +67,7 @@ confines it to the primary monitor.
 | `AppSettings.cs` | App-wide settings in `<exe>\settings.json` (HUD style/opacity/options, on top, tray, compact) |
 | `Profile.cs` / `ProfileManager.cs` | Per-aircraft settings, JSON files in `<exe>\Profiles\`, `_active.txt`; import/export, rename |
 | `Hotkey.cs` | The list of rebindable keyboard commands (`Hotkey.All`) |
-| `KeyboardHook.cs` | `WH_KEYBOARD_LL` hook; drops auto-repeat; `ReleaseStaleKeys()` |
+| `KeyboardHook.cs` | `WH_KEYBOARD_LL` hook; drops auto-repeat; `ReleaseStaleKeys()`; mouse buttons join it through `MouseButton()` |
 | `CursorHider.cs` | Swaps the system cursors for a blank one; `Restore()` reloads the scheme |
 | `VJoy.cs` | P/Invoke into `vJoyInterface.dll` (device id 1 is hard-coded) |
 
@@ -76,6 +76,10 @@ confines it to the primary monitor.
 - **Rates are per second, integrated over real `dt`** (a `Stopwatch`; the timer really runs at about 64 Hz).
   Trim and rudder use `rate × dt`; the spring decay and smoothing compound per-10 ms factors over `dt`.
   Never go back to per-tick constants.
+- **Stick state:** `stickRoll/stickPitch` is the stick before trim. It holds during freelook (always, also in
+  Spring) and in standby only with Hold stick position; otherwise `ResetStick()` zeroes it every standby tick.
+  `PlaceCursor()` puts the cursor back on the held position (`lastInX/Y`, direct mode) on resume. Center
+  stick also centers the rudder (`RudderValue`) but never touches the trims.
 - **Flight screen:** on activation the primary monitor is fixed as `flightScreen`, the cursor is confined
   to it with `ClipCursor` (re-asserted every tick) and released on deactivate and on close.
 - **Stuck keys:** `KeyboardHook.ReleaseStaleKeys()` runs every tick and fires the missing `KeyUp` for keys
@@ -100,6 +104,9 @@ confines it to the primary monitor.
   3. handle it in `MainForm.OnKeyDown`/`OnKeyUp`;
   4. if it should appear in "Keys in use" on the Fly tab, add it to `RefreshHotkeyUi()`.
 - In key capture, Esc cancels and Backspace clears, so neither can be bound.
+- Mouse buttons (right, middle, X1, X2 as VK 2/4/5/6) come from Raw Input in `WndProc` and go through the
+  same `OnKeyDown`/`OnKeyUp`, so any command or vJoy button can use them. The primary button is left
+  out (the user's decision). Raw Input can't swallow the click: it still reaches the sim.
 - Conflicts among the hotkeys block the change (Swap/Cancel). A hotkey that is also a vJoy button only
   warns, on both lists (`HotkeyWarning`/`BindingWarning`): the command wins, except the rudder keys
   (while keyboard rudder is on), which press the button too. `CommandOn()` mirrors `OnKeyDown`; keep

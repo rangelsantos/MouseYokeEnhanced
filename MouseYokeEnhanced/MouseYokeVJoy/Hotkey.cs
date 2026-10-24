@@ -2,15 +2,17 @@ using System;
 
 namespace MouseYokeVJoy;
 
-// A rebindable keyboard command. The key itself is stored on the Profile, so each aircraft
-// keeps its own; 0 means unassigned. Defaults come from a fresh Profile's initializers.
+// A rebindable command, on a key or a mouse button. The binding is stored on the Profile, so
+// each aircraft keeps its own; 0 means unassigned. Defaults come from a fresh Profile's initializers.
 public sealed class Hotkey
 {
 	private static readonly Profile Defaults = new Profile();
 
-	public static readonly Hotkey[] All = new Hotkey[8]
+	public static readonly Hotkey[] All = new Hotkey[10]
 	{
 		new Hotkey("FLIGHT", "Fly / standby", (Profile p) => p.ToggleVk, (Profile p, int vk) => p.ToggleVk = vk),
+		new Hotkey("FLIGHT", "Freelook (hold)", (Profile p) => p.FreelookVk, (Profile p, int vk) => p.FreelookVk = vk),
+		new Hotkey("FLIGHT", "Center stick", (Profile p) => p.CenterVk, (Profile p, int vk) => p.CenterVk = vk),
 		new Hotkey("TRIM", "Pitch trim up", (Profile p) => p.TrimUpVk, (Profile p, int vk) => p.TrimUpVk = vk),
 		new Hotkey("TRIM", "Pitch trim down", (Profile p) => p.TrimDownVk, (Profile p, int vk) => p.TrimDownVk = vk),
 		new Hotkey("TRIM", "Roll trim left", (Profile p) => p.TrimLeftVk, (Profile p, int vk) => p.TrimLeftVk = vk),

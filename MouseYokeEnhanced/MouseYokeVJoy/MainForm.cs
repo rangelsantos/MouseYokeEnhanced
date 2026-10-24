@@ -113,6 +113,18 @@ public partial class MainForm : Form
 
 	private double rollTrim;
 
+	// The stick before trim, as sent to vJoy. It holds during freelook, and in standby with Hold position.
+	private double stickRoll;
+
+	private double stickPitch;
+
+	// The last direct-mode cursor position (-1..1 of the stick zone), to put the cursor back where the stick is.
+	private double lastInX;
+
+	private double lastInY;
+
+	private bool freelook;
+
 	// The roll input before shaping, for the dot on the Feel curve.
 	private double curveInput;
 
@@ -160,6 +172,18 @@ public partial class MainForm : Form
 
 	private const ushort MOUSE_MOVE_ABSOLUTE = 1;
 
+	private const int SM_SWAPBUTTON = 23;
+
+	// Raw Input button-down flags and their VKs (left, right, middle, X1, X2); each button's up flag is the next bit.
+	private static readonly (ushort Down, int Vk)[] MouseButtonFlags = new (ushort, int)[5]
+	{
+		(0x0001, 1),
+		(0x0004, 2),
+		(0x0010, 4),
+		(0x0040, 5),
+		(0x0100, 6)
+	};
+
 	private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
 	[DllImport("user32.dll")]
@@ -173,6 +197,9 @@ public partial class MainForm : Form
 
 	[DllImport("user32.dll")]
 	private static extern bool GetClipCursor(out RECT lpRect);
+
+	[DllImport("user32.dll")]
+	private static extern int GetSystemMetrics(int nIndex);
 
 	[DllImport("dwmapi.dll")]
 	private static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int attrValue, int attrSize);
@@ -321,6 +348,7 @@ public partial class MainForm : Form
 			profile.InvertRoll = cbInvertRoll.Checked;
 			profile.HideCursor = swHideCursor.Checked;
 			profile.SelfCenter = SpringMode;
+			profile.HoldPosition = swHoldPosition.Checked;
 			profile.RudderEnabled = swRudder.Checked;
 			profile.RudderRatePct = tbRudderRate.Value;
 			saveTimer.Stop();
@@ -370,6 +398,10 @@ public partial class MainForm : Form
 		ReleaseAllButtons();
 		pitchTrim = 0.0;
 		rollTrim = 0.0;
+		if (!active)
+		{
+			ResetStick();
+		}
 		profile.RudderValue = 0.0;
 		if (acquired)
 		{
@@ -590,6 +622,17 @@ public partial class MainForm : Form
 			ToggleActive();
 			return;
 		}
+		if (vk == profile.FreelookVk)
+		{
+			SetFreelook(on: true);
+			return;
+		}
+		if (vk == profile.CenterVk)
+		{
+			CenterStick();
+			HudToast("CENTER");
+			return;
+		}
 		if (vk == profile.TrimUpVk)
 		{
 			trimUpHeld = true;
@@ -644,6 +687,10 @@ public partial class MainForm : Form
 
 	private void OnKeyUp(int vk)
 	{
+		if (vk == profile.FreelookVk)
+		{
+			SetFreelook(on: false);
+		}
 		if (vk == profile.TrimUpVk)
 		{
 			trimUpHeld = false;
@@ -691,13 +738,17 @@ public partial class MainForm : Form
 		active = !active;
 		if (active)
 		{
-			Rectangle b = Screen.PrimaryScreen.Bounds;
-			flightScreen = b;
-			ConfineCursor();
-			SetCursorPos(b.Left + b.Width / 2, b.Top + b.Height / 2);
-			smoothX = (smoothY = 0.0);
-			springX = (springY = 0.0);
+			flightScreen = Screen.PrimaryScreen.Bounds;
+			if (!swHoldPosition.Checked)
+			{
+				ResetStick();
+			}
 			rawDX = (rawDY = 0);
+			if (!freelook)
+			{
+				ConfineCursor();
+				PlaceCursor();
+			}
 			if (swHideCursor.Checked)
 			{
 				CursorHider.Hide();
@@ -708,7 +759,7 @@ public partial class MainForm : Form
 		{
 			CursorHider.Restore();
 			ReleaseCursor();
-			SetStatus("Standby. Trim holds; mouse free for the cockpit.", Theme.Muted);
+			SetStatus(swHoldPosition.Checked ? "Standby. Stick and trim hold; mouse free for the cockpit." : "Standby. Trim holds; mouse free for the cockpit.", Theme.Muted);
 		}
 		btnToggle.Flying = active;
 		Icon = BrandIcon.Window(active);
@@ -740,6 +791,80 @@ public partial class MainForm : Form
 	private static void ReleaseCursor()
 	{
 		ClipCursor(IntPtr.Zero);
+	}
+
+	// The share of the half-screen that gives full deflection in direct mode: more sensitivity, smaller zone.
+	private static double Zone(int sens)
+	{
+		return 1.0 - (double)(sens - 1) / 99.0 * 0.8;
+	}
+
+	// Puts the cursor where the stick is, so flying picks up without a jump: on the held position in
+	// direct mode, at the center in spring mode (which reads only movement).
+	private void PlaceCursor()
+	{
+		Rectangle b = flightScreen;
+		double x = (double)b.Left + (double)b.Width / 2.0;
+		double y = (double)b.Top + (double)b.Height / 2.0;
+		if (!SpringMode)
+		{
+			x += lastInX * ((double)b.Width / 2.0 * Zone(tbRollSens.Value));
+			y += lastInY * ((double)b.Height / 2.0 * Zone(tbPitchSens.Value));
+		}
+		SetCursorPos((int)Math.Round(x), (int)Math.Round(y));
+	}
+
+	private void ResetStick()
+	{
+		smoothX = (smoothY = 0.0);
+		springX = (springY = 0.0);
+		lastInX = (lastInY = 0.0);
+		stickRoll = (stickPitch = 0.0);
+		curveInput = 0.0;
+	}
+
+	// Stick and rudder back to center; the trims stay. Flying in direct mode the cursor goes to the
+	// center and smoothing carries the stick there, as if the mouse had moved; otherwise it centers at once.
+	private void CenterStick()
+	{
+		bool flying = active && !freelook;
+		double sx = smoothX;
+		double sy = smoothY;
+		ResetStick();
+		profile.RudderValue = 0.0;
+		if (flying && !SpringMode)
+		{
+			smoothX = sx;
+			smoothY = sy;
+		}
+		if (flying)
+		{
+			rawDX = (rawDY = 0);
+			PlaceCursor();
+		}
+	}
+
+	// While the freelook key is held the mouse is free and the stick holds where it was. On release
+	// the cursor goes back to the stick's position, so flying picks up exactly from there.
+	private void SetFreelook(bool on)
+	{
+		if (freelook == on)
+		{
+			return;
+		}
+		freelook = on;
+		if (!active)
+		{
+			return;
+		}
+		if (on)
+		{
+			ReleaseCursor();
+			return;
+		}
+		rawDX = (rawDY = 0);
+		ConfineCursor();
+		PlaceCursor();
 	}
 
 	private void EnsureOverlay()
@@ -822,7 +947,8 @@ public partial class MainForm : Form
 			PitchTrim = pitchTrim,
 			RollTrim = rollTrim,
 			Deadzone = (double)tbDeadzone.Value / 100.0,
-			Active = active,
+			Active = active && !freelook,
+			Freelook = active && freelook,
 			Spring = SpringMode,
 			RudderOn = profile.RudderEnabled,
 			ToggleKey = ((profile.ToggleVk != 0) ? Profile.KeyName(profile.ToggleVk) : ""),
@@ -857,7 +983,8 @@ public partial class MainForm : Form
 		{
 			return;
 		}
-		if (active)
+		bool flying = active && !freelook;
+		if (flying)
 		{
 			ConfineCursor();
 		}
@@ -878,9 +1005,7 @@ public partial class MainForm : Form
 		{
 			rollTrim = Clamp(rollTrim + trimStep, -1.0, 1.0);
 		}
-		double mRoll = 0.0;
-		double mPitch = 0.0;
-		if (active && SpringMode)
+		if (flying && SpringMode)
 		{
 			Rectangle ps = flightScreen;
 			double dx;
@@ -932,20 +1057,20 @@ public partial class MainForm : Form
 			{
 				oy = 0.0 - oy;
 			}
-			mRoll = ox;
-			mPitch = oy;
+			stickRoll = ox;
+			stickPitch = oy;
 		}
-		else if (active)
+		else if (flying)
 		{
 			rawDX = 0;
 			rawDY = 0;
 			Rectangle scr2 = flightScreen;
 			double cx = (double)scr2.Left + (double)scr2.Width / 2.0;
 			double cy = (double)scr2.Top + (double)scr2.Height / 2.0;
-			double zoneRoll = 1.0 - (double)(tbRollSens.Value - 1) / 99.0 * 0.8;
-			double zonePitch = 1.0 - (double)(tbPitchSens.Value - 1) / 99.0 * 0.8;
-			double nx = Clamp(((double)System.Windows.Forms.Cursor.Position.X - cx) / ((double)scr2.Width / 2.0 * zoneRoll), -1.0, 1.0);
-			double ny = Clamp(((double)System.Windows.Forms.Cursor.Position.Y - cy) / ((double)scr2.Height / 2.0 * zonePitch), -1.0, 1.0);
+			double nx = Clamp(((double)System.Windows.Forms.Cursor.Position.X - cx) / ((double)scr2.Width / 2.0 * Zone(tbRollSens.Value)), -1.0, 1.0);
+			double ny = Clamp(((double)System.Windows.Forms.Cursor.Position.Y - cy) / ((double)scr2.Height / 2.0 * Zone(tbPitchSens.Value)), -1.0, 1.0);
+			lastInX = nx;
+			lastInY = ny;
 			curveInput = nx;
 			double dz = (double)tbDeadzone.Value / 100.0;
 			double expo2 = (double)tbExpo.Value / 100.0;
@@ -962,19 +1087,21 @@ public partial class MainForm : Form
 			double a = 1.0 - Math.Pow((double)tbSmooth.Value / 100.0, dt * 100.0);
 			smoothX += (nx - smoothX) * a;
 			smoothY += (ny - smoothY) * a;
-			mRoll = smoothX;
-			mPitch = smoothY;
+			stickRoll = smoothX;
+			stickPitch = smoothY;
 		}
 		else
 		{
-			smoothX = (smoothY = 0.0);
-			springX = (springY = 0.0);
+			// The mouse is free: the stick holds during freelook, and in standby only with Hold position.
 			rawDX = 0;
 			rawDY = 0;
-			curveInput = 0.0;
+			if (!active && !swHoldPosition.Checked)
+			{
+				ResetStick();
+			}
 		}
-		double outRoll = Clamp(mRoll + rollTrim, -1.0, 1.0);
-		double outPitch = Clamp(mPitch + pitchTrim, -1.0, 1.0);
+		double outRoll = Clamp(stickRoll + rollTrim, -1.0, 1.0);
+		double outPitch = Clamp(stickPitch + pitchTrim, -1.0, 1.0);
 		lastOutRoll = outRoll;
 		lastOutPitch = outPitch;
 		VJoy.SetAxis(ToAxis(outRoll), 1u, 48u);
@@ -1128,6 +1255,29 @@ public partial class MainForm : Form
 		}
 	}
 
+	// Raw Input sees the buttons even while the sim has focus, but it can't swallow the click.
+	// The primary button (left, or right when swapped) stays out: it is the one that clicks the
+	// UI and the cockpit. Raw Input and GetAsyncKeyState both report physical buttons.
+	private void OnMouseButtons(ushort flags)
+	{
+		int primary = ((GetSystemMetrics(SM_SWAPBUTTON) != 0) ? 2 : 1);
+		foreach ((ushort down, int vk) in MouseButtonFlags)
+		{
+			if (vk == primary)
+			{
+				continue;
+			}
+			if ((flags & down) != 0)
+			{
+				hook.MouseButton(vk, down: true);
+			}
+			if ((flags & (down << 1)) != 0)
+			{
+				hook.MouseButton(vk, down: false);
+			}
+		}
+	}
+
 	protected override void WndProc(ref Message m)
 	{
 		if (m.Msg == 255)
@@ -1147,6 +1297,10 @@ public partial class MainForm : Form
 						{
 							rawDX += ri.mouse.lLastX;
 							rawDY += ri.mouse.lLastY;
+						}
+						if (ri.header.dwType == 0 && ri.mouse.usButtonFlags != 0)
+						{
+							OnMouseButtons(ri.mouse.usButtonFlags);
 						}
 					}
 				}

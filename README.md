@@ -29,10 +29,14 @@ especially on takeoff and landing.
 - **Tune the feel.** Sensitivity per axis, expo, deadzone, smoothing and auto-center, with a live
   response curve that shows what each slider does.
 - **Trim that holds.** Pitch and roll trim on hold-to-move keys, plus a one-key reset.
+- **No jumps.** Hold a freelook key or mouse button to look around while the stick stays put,
+  center the stick and rudder with one key, and optionally keep the stick's position when you
+  start or stop flying.
 - **Keyboard rudder.** Smooth rudder on the vJoy Z axis from two keys.
 - **Extra buttons.** Map any key to a vJoy button (gear, flaps, brakes, lights…) and give it a
   name. You get as many as vJoy is set up for; 16 is recommended.
-- **Every key is yours.** Rebind or clear any command. Conflicts are caught, with a one-click swap.
+- **Every key is yours.** Rebind or clear any command, on a key or a mouse button. Conflicts are
+  caught, with a one-click swap.
 - **On-screen HUD.** Four styles drawn over the sim, click-through, with size, opacity and position.
 - **Profiles per aircraft.** Each keeps its own feel, keys and buttons. Import and export them to
   share.
@@ -62,7 +66,8 @@ when it's amber or red to see what's missing.
 
 <img src="docs/images/feel.png" width="360" align="right" alt="Feel tab">
 
-Pick **Direct** or **Spring** at the top, then adjust the sliders. The **Response** graph draws
+Pick **Direct** or **Spring** at the top, and turn on **Hold stick position** if the stick should
+stay where it is when you start or stop flying. Then adjust the sliders. The **Response** graph draws
 the curve against a dashed linear line, and while you fly a green dot shows where the mouse sits on
 it.
 
@@ -78,8 +83,8 @@ back to its starting value.
   <img src="docs/images/keys-buttons.png" width="49%" alt="vJoy buttons list">
 </p>
 
-**Commands** holds every keyboard command: fly/standby, trim, trim reset and rudder. Click a key
-and press the new one. **Esc** cancels, **Backspace** clears, **↺** restores the default.
+**Commands** holds every command: fly/standby, freelook, center stick, trim, trim reset and
+rudder. Click a key and press the new one, or a mouse button (right, middle, 4 or 5). **Esc** cancels, **Backspace** clears, **↺** restores the default.
 
 **vJoy buttons** maps keys to joystick buttons. Click **+ Add key**, press the key, choose the
 button number and name it. Then bind that button in the sim's controls.
@@ -93,7 +98,7 @@ whether you're **ACTIVE** or in **STANDBY**. Choose the style, size and opacity,
 wherever you like with **Position HUD…**. Rudder and trim indicators only appear when the
 aircraft uses them, or you can show or hide each one yourself.
 
-It also flashes **ACTIVE**, **STANDBY** or **TRIM RESET** when you press the keys, so you know
+It also flashes **ACTIVE**, **STANDBY**, **TRIM RESET** or **CENTER** when you press the keys, so you know
 it worked even with the window hidden behind the sim.
 
 <br clear="right">
@@ -124,6 +129,8 @@ means you're flying.
 | **Insert / Delete** | Roll trim (hold) |
 | **Home** | Reset trim |
 | **Comma , / Period .** | Rudder left / right (hold, with keyboard rudder on) |
+| *not set* | Freelook (hold) |
+| *not set* | Center stick and rudder |
 
 All of them can be changed on the **Keys** tab, per aircraft profile.
 

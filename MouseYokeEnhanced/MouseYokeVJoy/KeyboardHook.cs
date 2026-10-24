@@ -84,22 +84,46 @@ public class KeyboardHook : IDisposable
 			{
 			case 256:
 			case 260:
-				if (_down.Add(vk))
-				{
-					KeyDown?.Invoke(vk);
-				}
+				Press(vk);
 				break;
 			case 257:
 			case 261:
-				_stale.Remove(vk);
-				if (_down.Remove(vk))
-				{
-					KeyUp?.Invoke(vk);
-				}
+				Release(vk);
 				break;
 			}
 		}
 		return CallNextHookEx(_hook, nCode, wParam, lParam);
+	}
+
+	// Mouse buttons come from Raw Input, not from this hook; they join the same held-key
+	// tracking so commands bound to them get the same stale-key release.
+	public void MouseButton(int vk, bool down)
+	{
+		if (down)
+		{
+			Press(vk);
+		}
+		else
+		{
+			Release(vk);
+		}
+	}
+
+	private void Press(int vk)
+	{
+		if (_down.Add(vk))
+		{
+			KeyDown?.Invoke(vk);
+		}
+	}
+
+	private void Release(int vk)
+	{
+		_stale.Remove(vk);
+		if (_down.Remove(vk))
+		{
+			KeyUp?.Invoke(vk);
+		}
 	}
 
 	// Fires KeyUp for keys whose key-up never reached the hook (Win+L, UAC prompt,

@@ -91,6 +91,13 @@ These are the starting keys. You can change any of them (see **Changing your key
 - **Home** — reset trim to neutral
 - **Comma , / Period .** — rudder left or right (hold; only when keyboard rudder is on)
 
+Two more commands start with no key; give them one on the Keys tab if you want them:
+
+- **Freelook (hold)** — while you hold it, the mouse is yours again (to look around) and the
+  stick stays exactly where it was. Let go and you fly on from the same spot. A mouse button
+  works well here; **Mouse right** pairs with the sim's own right-click camera look.
+- **Center stick** — puts the stick and the rudder back in the middle. Your trim stays as it is.
+
 Think of **trim** as "hold this attitude for me." Set your climb or descent, trim it in, and
 the plane holds it so you're not fighting the controls.
 
@@ -107,7 +114,8 @@ rudder.
 Open the **Keys** tab and pick **Commands**. Every keyboard command is listed there.
 
 1. Click the key next to a command. It changes to **Press a key…**
-2. Press the key you want to use.
+2. Press the key you want to use. A mouse button works too: right, middle, or the two side
+   buttons (**Mouse 4** and **Mouse 5**). The left button can't be used, since it clicks.
 
 - **Esc** cancels without changing anything.
 - **Backspace** leaves the command with no key ("Not set").
@@ -139,6 +147,12 @@ At the top of the **Feel** tab you choose the **stick mode**:
 
 Try both and keep whichever you like. You can set it differently for each aircraft (see Profiles).
 
+Below the modes, **Hold stick position** keeps the stick where it is when you press F9, both
+ways. Stop flying in a turn and the sim keeps getting that same turn; start again and the stick
+picks up from there, with the pointer put back where it was. Without it, the stick goes to the
+middle when you stop and starts from the middle when you fly again. Either way, **Center stick**
+brings it back to the middle whenever you like.
+
 ---
 
 ## Making it feel just right
@@ -169,8 +183,13 @@ you're flying a green dot shows where your mouse is on the curve.
   **Keyboard rudder** and you get smooth rudder without a joystick. The rudder keys
   (**Comma ,** and **Period .** to start with) and the rudder speed are right there too.
   (Remember to bind Rudder Axis in the sim, Step 4 above.)
+- **Freelook** — give **Freelook (hold)** a key or mouse button on the Keys tab. Hold it to take
+  your mouse off the stick for a moment: the stick and the trim stay put, the pointer stays
+  hidden, and the HUD shows **FREELOOK**. In Spring mode the stick doesn't spring back while
+  you hold it. Clicks still reach the sim, so a button that does something there (like the
+  right button, which turns the camera) does both.
 - **Extra buttons** — on the **Keys** tab, pick **vJoy buttons**. Click **+ Add key**, press the
-  key, and choose the button number with the arrows; then bind that "button" in the sim's
+  key (or a mouse button), and choose the button number with the arrows; then bind that "button" in the sim's
   controls (gear, flaps, brakes, autopilot…). You can give each one a name, like "Landing gear",
   so you remember what it does. The light on the left turns green while the key is down.
 
@@ -201,8 +220,8 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
 - **Position HUD…** — shows the HUD so you can drag it anywhere. Click **Done** (on the HUD or
   in the app) when it's in place. **Reset position** puts it back at the top of your main screen.
 
-When you press F9 or reset the trim, the HUD briefly shows **ACTIVE**, **STANDBY** or
-**TRIM RESET**, so you know it worked even when the MouseYoke window is hidden behind the sim.
+When you press F9, reset the trim or center the stick, the HUD briefly shows **ACTIVE**,
+**STANDBY**, **TRIM RESET** or **CENTER**, so you know it worked even when the MouseYoke window is hidden behind the sim.
 
 The HUD settings are the same for every aircraft profile.
 

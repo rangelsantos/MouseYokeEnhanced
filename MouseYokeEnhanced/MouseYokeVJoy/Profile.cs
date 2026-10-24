@@ -39,7 +39,14 @@ public class Profile
 
 	public int CenterSpeed { get; set; } = 120;
 
+	// Keeps the stick where it was when flight is toggled, instead of snapping it to center.
+	public bool HoldPosition { get; set; } = false;
+
 	public int ToggleVk { get; set; } = 120;
+
+	public int FreelookVk { get; set; } = 0;
+
+	public int CenterVk { get; set; } = 0;
 
 	public int TrimUpVk { get; set; } = 33;
 
@@ -67,6 +74,11 @@ public class Profile
 		return k switch
 		{
 			Keys.None => "Not set",
+			Keys.LButton => "Mouse left",
+			Keys.RButton => "Mouse right",
+			Keys.MButton => "Mouse middle",
+			Keys.XButton1 => "Mouse 4",
+			Keys.XButton2 => "Mouse 5",
 			Keys.PageUp => "Page Up",
 			Keys.PageDown => "Page Down",
 			Keys.Back => "Backspace",
