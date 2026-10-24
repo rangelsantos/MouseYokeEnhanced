@@ -146,32 +146,11 @@ MouseYoke can't see your keys.
 📖 The full **[user manual](MouseYokeEnhanced/MouseYoke_Manual.md)** covers every option and has a
 *Quick fixes* section.
 
----
-
 ## Requirements
 
 - Windows 10 or 11, 64-bit
 - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (x64)
 - [vJoy](https://github.com/jshafer817/vJoy/releases), device 1 with X, Y, Z and 16 buttons
-- Microsoft Flight Simulator (or another sim that reads a joystick)
-
-## Download
-
-Download `MouseYokeEnhanced-v<version>.zip` from the
-[latest release](https://github.com/rangelsantos/MouseYokeEnhanced/releases/latest). A new version
-(v1.0, v1.1...) is built automatically from every push to `main`. Unzip it and run
-`MouseYokeVJoy.exe`. To update, unzip the new version over the old folder: your profiles and
-settings are kept. Or build it yourself:
-
-```powershell
-dotnet build MouseYokeEnhanced\MouseYokeVJoy.csproj -c Release
-```
-
-Building needs the .NET 10 SDK (the app still targets .NET 8). The output is in
-`MouseYokeEnhanced\bin\Release\net8.0-windows7.0\`. Profiles and settings are saved next to the
-exe, so keep the folder somewhere you can write to (not Program Files).
-
----
 
 ## Credits
 
