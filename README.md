@@ -162,8 +162,9 @@ MouseYoke can't see your keys.
 
 ## Credits
 
-MouseYoke Enhanced builds on the original **MouseYoke** (MouseYokeVJoy 1.0.0), with a new
-interface and new features. Joystick output goes through
+MouseYoke Enhanced builds on the original **MouseYoke** (MouseYokeVJoy 1.0.0), created by
+**bbnycreamtea** and published on [flightsim.to](https://flightsim.to). This version adds a new
+interface and new features. Thanks to bbnycreamtea for the original app. Joystick output goes through
 [vJoy](https://github.com/jshafer817/vJoy).
 
 <p align="center">Enjoy the skies! ✈️</p>

@@ -1,4 +1,4 @@
-# MouseYoke — Fly with your mouse
+# MouseYokeEnhanced — Fly with your mouse
 
 **Fly Microsoft Flight Simulator using just your mouse and keyboard — no joystick needed.**
 
@@ -296,6 +296,14 @@ which version you have, right-click `MouseYokeVJoy.exe` → **Properties** → *
   MouseYoke folder somewhere you can write to (for example Documents, not Program Files).
 - **The pointer got stuck invisible after a crash.** Just start MouseYoke again and press
   F9 on and off, or lock and unlock your PC (Windows key + L). Your cursor comes right back.
+
+---
+
+## Credits
+
+MouseYoke Enhanced is based on the original **MouseYoke**, created by **bbnycreamtea** and
+published on [flightsim.to](https://flightsim.to). Thank you for the idea and the app this
+version builds on. Joystick output goes through [vJoy](https://github.com/jshafer817/vJoy).
 
 ---
 
