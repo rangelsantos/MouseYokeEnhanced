@@ -12,7 +12,7 @@ The user writes in Portuguese (pt-BR). The app UI and the manual are in English;
   only: never edit. The build copies `vJoyInterface.dll` from here.
 - `MouseYokeEnhanced/` — the source we work on (`MouseYokeVJoy.csproj`, code in `MouseYokeVJoy/`).
 - `README.md` — the GitHub presentation page (logo, screenshots, highlights, quick start). It is
-  **not** the manual: it links to `MouseYokeEnhanced/MouseYoke_Manual.md`, which is copied next to the
+  **not** the manual: it links to `MouseYokeEnhanced/MouseYokeEnhanced_Manual.md`, which is copied next to the
   exe. When a feature changes, update the manual, and the README if it mentions it. Both UTF-8.
 - `docs/images/` — the README screenshots. Retake them after a visible UI change (see Build: a scratch
   copy with a demo profile; park the window away from the real cursor so no tooltip shows).
@@ -23,7 +23,7 @@ The user writes in Portuguese (pt-BR). The app UI and the manual are in English;
   GitHub release `v<MAJOR>.<n>` (from v1.0; `MAJOR` is set in the workflow) with
   `MouseYokeEnhanced-v<MAJOR>.<n>.zip` and the commits since the last tag as notes. Inside the zip the
   folder is always `MouseYokeEnhanced\`, so unzipping a new version over an old one keeps its profiles. It stamps that version into `AssemblyInfo.cs` in CI only
-  (the file keeps `1.0.0` in git). The original `MouseYoke/` binaries are never released; only
+  (the file keeps `0.0.0` in git, which the About dialog shows as "Development build"). The original `MouseYoke/` binaries are never released; only
   `vJoyInterface.dll` comes along. The README links to the `releases/latest` page.
 - `design/` — local, git-ignored mockups of the UI redesign (`redesign.html`). Never commit or publish it.
 
@@ -58,7 +58,7 @@ confines it to the primary monitor.
 | File | Role |
 |---|---|
 | `MainForm.cs` | Logic: control loop, Raw Input, vJoy setup and checks, key handling, profile actions, HUD visibility |
-| `MainForm.Ui.cs` | The screens, built in code (no designer): header, tabs Fly/Feel/Keys/HUD, status bar, compact window, tray, hotkey and button lists |
+| `MainForm.Ui.cs` | The screens, built in code (no designer): header, tabs Fly/Feel/Keys/HUD, status bar, compact window, tray, hotkey and button lists, About dialog (ⓘ in the header: version, credits, links) |
 | `DarkControls.cs` | Owner-drawn controls: `Slider`, `ToggleSwitch`, `Segmented`, `TabButton`, `ActivateButton`, `StickMonitor`, `CurveView`, `LampStrip`, `KeyLegend`, `Stepper`, `HudPreview`, dark menus |
 | `HudRenderer.cs` | Draws the four HUD styles (`HudStyle`) from a `HudState`; shared by the overlay, the Fly monitor and the HUD preview |
 | `OverlayForm.cs` | Click-through HUD: per-pixel-alpha layered window (`UpdateLayeredWindow`), never activates; position mode with Done; notices |

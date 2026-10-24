@@ -46,6 +46,10 @@ The chip at the top right shows how vJoy is set up, for example **vJoy 1 · XYZ 
 axes X, Y and Z, 16 buttons). Green means all good. If it turns amber or red, click it: it tells
 you what's missing and how to fix it in Configure vJoy.
 
+The **ⓘ** button next to it opens **About**: the version you have, the credits, and links to the
+GitHub repository, its Releases page and this manual. **Copy info** copies your version and vJoy setup,
+ready to paste into a bug report.
+
 - If it says **vJoyInterface.dll is missing**, put that file back in the MouseYoke folder (it
   comes with the app).
 
@@ -272,7 +276,8 @@ New versions (v1.0, v1.1…) are on the
 `MouseYokeEnhanced-v<version>.zip`, close MouseYoke (right-click the tray icon → Exit if it's in
 the tray), and unzip it over your old **MouseYokeEnhanced** folder, replacing the files. Your
 profiles and settings are kept: they live in that folder and the zip doesn't include any. To see
-which version you have, right-click `MouseYokeVJoy.exe` → **Properties** → **Details**.
+which version you have, click **ⓘ** at the top right; **Releases** there opens the
+Releases page.
 
 ---
 
@@ -301,9 +306,15 @@ which version you have, right-click `MouseYokeVJoy.exe` → **Properties** → *
 
 ## Credits
 
-MouseYoke Enhanced is based on the original **MouseYoke**, created by **bbnycreamtea** and
-published on [flightsim.to](https://flightsim.to). Thank you for the idea and the app this
-version builds on. Joystick output goes through [vJoy](https://github.com/jshafer817/vJoy).
+MouseYokeEnhanced is created by **Rangel Santos** and published on
+[GitHub](https://github.com/rangelsantos/MouseYokeEnhanced). It is based on the original
+**MouseYoke** by **bbnycreamtea** ([flightsim.to](https://flightsim.to)). Thank you for the idea
+and the app this version builds on. Joystick output goes through
+[vJoy](https://github.com/jshafer817/vJoy).
+
+If MouseYokeEnhanced makes your flights better, you can
+[buy me a coffee](https://ko-fi.com/rangelsantosss) ☕ on Ko-fi or [sponsor it](https://github.com/sponsors/rangelsantos) on GitHub (also in
+**ⓘ** → **Buy me a coffee**).
 
 ---
 

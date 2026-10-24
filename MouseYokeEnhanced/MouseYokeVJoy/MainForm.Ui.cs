@@ -538,7 +538,7 @@ public partial class MainForm
 		TableLayoutPanel bar = new TableLayoutPanel
 		{
 			Dock = DockStyle.Fill,
-			ColumnCount = 3,
+			ColumnCount = 4,
 			BackColor = Theme.Bar,
 			Padding = new Padding(10, 8, 10, 8),
 			Margin = Padding.Empty,
@@ -546,7 +546,8 @@ public partial class MainForm
 			{
 				new ColumnStyle(SizeType.Percent, 100f),
 				new ColumnStyle(SizeType.Absolute, 38f),
-				new ColumnStyle(SizeType.AutoSize)
+				new ColumnStyle(SizeType.AutoSize),
+				new ColumnStyle(SizeType.Absolute, 38f)
 			}
 		};
 		bar.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
@@ -579,9 +580,20 @@ public partial class MainForm
 		{
 			MessageBox.Show(this, vjoyDetails, "vJoy status", MessageBoxButtons.OK, (vjoyChip.Kind == ChipKind.Ok) ? MessageBoxIcon.Asterisk : MessageBoxIcon.Exclamation);
 		};
+		Button aboutButton = Styled("ⓘ", Theme.Input);
+		aboutButton.Font = new Font("Segoe UI", 11f);
+		aboutButton.Dock = DockStyle.Fill;
+		aboutButton.Margin = new Padding(6, 0, 0, 0);
+		aboutButton.AccessibleName = "About MouseYokeEnhanced";
+		toolTip.SetToolTip(aboutButton, "About MouseYokeEnhanced");
+		aboutButton.Click += (object? s, EventArgs e) =>
+		{
+			ShowAbout();
+		};
 		bar.Controls.Add(profileButton, 0, 0);
 		bar.Controls.Add(moreButton, 1, 0);
 		bar.Controls.Add(vjoyChip, 2, 0);
+		bar.Controls.Add(aboutButton, 3, 0);
 		return bar;
 	}
 
@@ -850,6 +862,183 @@ public partial class MainForm
 		};
 		tb.SelectAll();
 		return (dlg.ShowDialog(this) == DialogResult.OK) ? tb.Text : null;
+	}
+
+	// ---------- About ----------
+
+	private const string RepoUrl = "https://github.com/rangelsantos/MouseYokeEnhanced";
+
+	private const string CoffeeUrl = "https://ko-fi.com/rangelsantosss";
+
+	// "1.4" from the 1.4.0 that the release workflow stamps; null for a local build, which keeps 0.0.0.
+	private static string AppVersion()
+	{
+		string v = Application.ProductVersion;
+		int plus = v.IndexOf('+');
+		if (plus >= 0)
+		{
+			v = v.Substring(0, plus);
+		}
+		if (!Version.TryParse(v, out Version parsed) || (parsed.Major == 0 && parsed.Minor == 0))
+		{
+			return null;
+		}
+		return parsed.Major + "." + parsed.Minor + ((parsed.Build > 0) ? ("." + parsed.Build) : "");
+	}
+
+	private LinkLabel Link(string text, Font font)
+	{
+		LinkLabel l = new LinkLabel
+		{
+			Text = text,
+			AutoSize = true,
+			Font = font,
+			LinkColor = Theme.Accent,
+			ActiveLinkColor = Color.White,
+			VisitedLinkColor = Theme.Accent,
+			LinkBehavior = LinkBehavior.HoverUnderline,
+			Margin = new Padding(0, 0, 0, 6)
+		};
+		l.LinkClicked += (object? s, LinkLabelLinkClickedEventArgs e) =>
+		{
+			OpenUrl((string)e.Link.LinkData);
+		};
+		return l;
+	}
+
+	private void ShowAbout()
+	{
+		string version = AppVersion();
+		using Form dlg = new Form();
+		dlg.Text = "About MouseYokeEnhanced";
+		dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+		dlg.StartPosition = FormStartPosition.CenterParent;
+		dlg.TopMost = true;
+		dlg.ShowInTaskbar = false;
+		dlg.ClientSize = new Size(360, 300);
+		dlg.MaximizeBox = false;
+		dlg.MinimizeBox = false;
+		dlg.BackColor = Theme.Bar;
+		dlg.ForeColor = Theme.Text;
+		dlg.Font = Font;
+		TableLayoutPanel t = new TableLayoutPanel
+		{
+			Dock = DockStyle.Fill,
+			ColumnCount = 2,
+			RowCount = 5,
+			Padding = new Padding(16, 16, 16, 14),
+			ColumnStyles =
+			{
+				new ColumnStyle(SizeType.AutoSize),
+				new ColumnStyle(SizeType.Percent, 100f)
+			}
+		};
+		t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		t.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+		t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+		dlg.Controls.Add(t);
+		using Icon icon = new Icon(BrandIcon.Window(active: false), 48, 48);
+		PictureBox logo = new PictureBox
+		{
+			Image = icon.ToBitmap(),
+			Size = new Size(48, 48),
+			SizeMode = PictureBoxSizeMode.CenterImage,
+			Margin = new Padding(0, 0, 12, 0)
+		};
+		t.Controls.Add(logo, 0, 0);
+		t.SetRowSpan(logo, 2);
+		t.Controls.Add(new Label
+		{
+			Text = "MouseYokeEnhanced",
+			AutoSize = true,
+			Font = Theme.Big,
+			ForeColor = Color.White,
+			Margin = new Padding(0, 4, 0, 2)
+		}, 1, 0);
+		t.Controls.Add(new Label
+		{
+			Text = ((version != null) ? ("Version " + version) : "Development build"),
+			AutoSize = true,
+			ForeColor = Theme.Muted,
+			Margin = Padding.Empty
+		}, 1, 1);
+		Label credits = new Label
+		{
+			Text = "Created by Rangel Santos, based on the original MouseYoke by bbnycreamtea (flightsim.to). Joystick output goes through vJoy.",
+			AutoSize = true,
+			ForeColor = Theme.Text,
+			MaximumSize = new Size(328, 0),
+			Margin = new Padding(0, 16, 0, 14)
+		};
+		t.Controls.Add(credits, 0, 2);
+		t.SetColumnSpan(credits, 2);
+		FlowLayoutPanel links = new FlowLayoutPanel
+		{
+			FlowDirection = FlowDirection.TopDown,
+			AutoSize = true,
+			Margin = Padding.Empty
+		};
+		(string, string)[] targets = new (string, string)[3]
+		{
+			("GitHub repository", RepoUrl),
+			("Releases", RepoUrl + "/releases"),
+			("User manual", RepoUrl + "/blob/main/MouseYokeEnhanced/MouseYokeEnhanced_Manual.md")
+		};
+		foreach ((string text, string url) in targets)
+		{
+			LinkLabel l = Link(text, Theme.Strong);
+			l.Links[0].LinkData = url;
+			links.Controls.Add(l);
+		}
+		LinkLabel coffee = Link("☕ Buy me a coffee", Theme.Strong);
+		coffee.LinkColor = Theme.Amber;
+		coffee.VisitedLinkColor = Theme.Amber;
+		coffee.Links[0].LinkData = CoffeeUrl;
+		coffee.Margin = new Padding(0, 6, 0, 6);
+		toolTip.SetToolTip(coffee, "Support MouseYokeEnhanced on Ko-fi");
+		links.Controls.Add(coffee);
+		t.Controls.Add(links, 0, 3);
+		t.SetColumnSpan(links, 2);
+		FlowLayoutPanel buttons = new FlowLayoutPanel
+		{
+			FlowDirection = FlowDirection.RightToLeft,
+			Dock = DockStyle.Fill,
+			AutoSize = true,
+			Margin = Padding.Empty
+		};
+		Button close = ActionButton("Close", Theme.Primary);
+		close.DialogResult = DialogResult.OK;
+		close.Margin = Padding.Empty;
+		Button copy = ActionButton("Copy info", Theme.Input);
+		toolTip.SetToolTip(copy, "Copy the version and setup, to paste into a bug report");
+		copy.Click += (object? s, EventArgs e) =>
+		{
+			string info = "MouseYokeEnhanced " + (version ?? "dev build") + "\r\n" + vjoyChip.Text + "\r\nWindows " + Environment.OSVersion.Version + "\r\n.NET " + Environment.Version;
+			try
+			{
+				Clipboard.SetText(info);
+				copy.Text = "Copied";
+			}
+			catch
+			{
+				copy.Text = "Clipboard busy";
+			}
+		};
+		buttons.Controls.Add(close);
+		buttons.Controls.Add(copy);
+		t.Controls.Add(buttons, 0, 4);
+		t.SetColumnSpan(buttons, 2);
+		dlg.AcceptButton = close;
+		dlg.CancelButton = close;
+		dlg.HandleCreated += (object? s, EventArgs e) =>
+		{
+			int dark = 1;
+			DwmSetWindowAttribute(dlg.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
+		};
+		dlg.ShowDialog(this);
+		logo.Image.Dispose();
 	}
 
 	// ---------- Fly ----------

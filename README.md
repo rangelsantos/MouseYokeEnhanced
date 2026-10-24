@@ -2,18 +2,19 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-2b2b33?logo=windows" alt="Windows 10 | 11">
   <img src="https://img.shields.io/badge/.NET-8%20Desktop-5a9ad6?logo=dotnet" alt=".NET 8 Desktop">
   <img src="https://img.shields.io/badge/needs-vJoy-5a9ad6" alt="Needs vJoy">
+  <a href="https://ko-fi.com/rangelsantosss"><img src="https://img.shields.io/badge/buy%20me%20a%20coffee-%E2%98%95-ffbe3c?logo=kofi" alt="Buy me a coffee"></a>
 </p>
 
 <p align="center">
-  <img src="MouseYokeEnhanced/Assets/Brand/mouseyoke-enhanced-logo-512.png" width="240" alt="MouseYoke Enhanced">
+  <img src="MouseYokeEnhanced/Assets/Brand/mouseyoke-enhanced-logo-512.png" width="240" alt="MouseYokeEnhanced">
 </p>
 <h3 align="center">Fly Microsoft Flight Simulator with your mouse — no joystick needed.</h3>
 
 <p align="center">
-  <img src="docs/images/fly.png" width="380" alt="MouseYoke Enhanced, Fly tab">
+  <img src="docs/images/fly.png" width="380" alt="MouseYokeEnhanced, Fly tab">
 </p>
 
-MouseYoke Enhanced turns your mouse into the aircraft's control stick. Move the mouse and the
+MouseYokeEnhanced turns your mouse into the aircraft's control stick. Move the mouse and the
 plane rolls and pitches; hold a key to trim or work the rudder. It talks to the sim through
 **vJoy**, a free virtual joystick, so Flight Simulator sees it as an ordinary controller.
 
@@ -60,7 +61,8 @@ Press **F9** or click **Activate** to start flying with the mouse. Press **F9** 
 pointer back for the cockpit.
 
 The chip at the top right checks vJoy for you (**vJoy 1 · XYZ · 16**). Green means ready; click it
-when it's amber or red to see what's missing.
+when it's amber or red to see what's missing. The **ⓘ** button next to it shows the version, the
+credits and links to the repository, its releases and the manual.
 
 ### Feel — make it respond your way
 
@@ -151,7 +153,7 @@ All of them can be changed on the **Keys** tab, per aircraft profile.
 Run the sim in **windowed** or **borderless** mode, and don't run it as Administrator, or
 MouseYoke can't see your keys.
 
-📖 The full **[user manual](MouseYokeEnhanced/MouseYoke_Manual.md)** covers every option and has a
+📖 The full **[user manual](MouseYokeEnhanced/MouseYokeEnhanced_Manual.md)** covers every option and has a
 *Quick fixes* section.
 
 ## Requirements
@@ -162,9 +164,12 @@ MouseYoke can't see your keys.
 
 ## Credits
 
-MouseYoke Enhanced builds on the original **MouseYoke** (MouseYokeVJoy 1.0.0), created by
-**bbnycreamtea** and published on [flightsim.to](https://flightsim.to). This version adds a new
-interface and new features. Thanks to bbnycreamtea for the original app. Joystick output goes through
-[vJoy](https://github.com/jshafer817/vJoy).
+MouseYokeEnhanced is created by **Rangel Santos** and published here on GitHub. It builds on the
+original **MouseYoke** (MouseYokeVJoy 1.0.0) by **bbnycreamtea** ([flightsim.to](https://flightsim.to)),
+adding a new interface and new features. Thanks to bbnycreamtea for the original app. Joystick
+output goes through [vJoy](https://github.com/jshafer817/vJoy).
+
+If MouseYokeEnhanced makes your flights better, you can
+[buy me a coffee](https://ko-fi.com/rangelsantosss) ☕ on Ko-fi or [sponsor it](https://github.com/sponsors/rangelsantos) on GitHub.
 
 <p align="center">Enjoy the skies! ✈️</p>

@@ -575,6 +575,21 @@ public partial class MainForm : Form
 		}
 	}
 
+	private void OpenUrl(string url)
+	{
+		try
+		{
+			Process.Start(new ProcessStartInfo(url)
+			{
+				UseShellExecute = true
+			});
+		}
+		catch
+		{
+			SetStatus("Couldn't open " + url, Color.IndianRed);
+		}
+	}
+
 	private static string UniqueName(string name)
 	{
 		if (!ProfileManager.Exists(name))

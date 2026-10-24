@@ -52,7 +52,8 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          sed -i -e "s/\"1\.0\.0\.0\"/\"$VERSION.0.0\"/" -e "s/\"1\.0\.0\"/\"$VERSION.0\"/" \
+          # AssemblyInfo.cs keeps 0.0.0 in git, which the app shows as a dev build.
+          sed -i -e "s/\"0\.0\.0\.0\"/\"$VERSION.0.0\"/" -e "s/\"0\.0\.0\"/\"$VERSION.0\"/" \
             MouseYokeEnhanced/Properties/AssemblyInfo.cs
           dotnet publish MouseYokeEnhanced/MouseYokeVJoy.csproj -c Release -o out/MouseYokeEnhanced
 
@@ -80,7 +81,7 @@ jobs:
             echo "## Install"
             echo
             echo "Unzip \`MouseYokeEnhanced-v$VERSION.zip\` anywhere you can write to (not Program Files) and run \`MouseYokeVJoy.exe\`."
-            echo "Needs the .NET 8 Desktop Runtime (x64) and vJoy (device 1). See \`MouseYoke_Manual.md\`."
+            echo "Needs the .NET 8 Desktop Runtime (x64) and vJoy (device 1). See \`MouseYokeEnhanced_Manual.md\`."
           } > notes.md
           gh release create "v$VERSION" "MouseYokeEnhanced-v$VERSION.zip" --target "$GITHUB_SHA" --latest \
             --title "MouseYokeEnhanced v$VERSION" --notes-file notes.md
