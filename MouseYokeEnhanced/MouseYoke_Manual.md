@@ -78,6 +78,9 @@ The window has four tabs:
 - **Keys** — every key: the commands (trim, rudder…) and the keys you mapped to vJoy buttons.
 - **HUD** — the on-screen display, plus a few window options.
 
+On a small screen, drag the top or bottom edge of the window to make it shorter (down to half of
+its tallest size); the tabs scroll. MouseYoke remembers the height for next time.
+
 While you're flying, the pointer stays on your main screen, so it can't slip onto another
 monitor and throw the controls to one side. Press **F9** to stop, and it's free again.
 

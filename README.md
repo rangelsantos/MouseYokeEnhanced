@@ -113,7 +113,8 @@ it worked even with the window hidden behind the sim.
 
 <img src="docs/images/compact.png" width="420" alt="Compact window">
 
-Shrink MouseYoke to a strip with just the essentials, for a second screen. With **Close to tray**,
+Shrink MouseYoke to a strip with just the essentials, for a second screen, or drag the full window
+shorter on a small screen (the tabs scroll and the height is remembered). With **Close to tray**,
 closing the window keeps it running with your keys working. Right-click the tray icon to show
 the window, start or stop flying, or exit. A red dot on the icon, in the tray and on the taskbar,
 means you're flying.

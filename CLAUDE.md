@@ -64,7 +64,7 @@ confines it to the primary monitor.
 | `OverlayForm.cs` | Click-through HUD: per-pixel-alpha layered window (`UpdateLayeredWindow`), never activates; position mode with Done; notices |
 | `Theme.cs` | Palette and fonts |
 | `BrandIcon.cs` | Window and tray icons from the embedded `MouseYoke.ico`, and the "flying" variant with a red dot (set in `ToggleActive()`) |
-| `AppSettings.cs` | App-wide settings in `<exe>\settings.json` (HUD style/opacity/options, on top, tray, compact) |
+| `AppSettings.cs` | App-wide settings in `<exe>\settings.json` (HUD style/opacity/options, on top, tray, compact, window height) |
 | `Profile.cs` / `ProfileManager.cs` | Per-aircraft settings, JSON files in `<exe>\Profiles\`, `_active.txt`; import/export, rename |
 | `Hotkey.cs` | The list of rebindable keyboard commands (`Hotkey.All`) |
 | `KeyboardHook.cs` | `WH_KEYBOARD_LL` hook; drops auto-repeat; `ReleaseStaleKeys()`; mouse buttons join it through `MouseButton()` |
@@ -90,6 +90,10 @@ confines it to the primary monitor.
   positioned, in standby if "Show in standby" is on, and briefly for a notice (`HudToast`).
 - **Saving:** `SaveActiveProfile()` copies the UI into the profile at once and writes the file 300 ms
   later (`saveTimer`); `FlushSave()` writes now. Code that switches profiles writes the old one itself.
+- **Window size:** the width is fixed; the full window resizes in height only (`MinHeight`..`MaxHeight`,
+  default `DefaultHeight`), enforced by `SetWindowSize()` (Minimum/MaximumSize) and `SizingHit()` in
+  `WndProc` (no horizontal or compact resize). `OnResizeEnd` stores the client height in
+  `AppSettings.WindowHeight` (0 = default). Every page must scroll (`Scroller()` or its own scrolling list).
 - `OverlayForm` takes the style in its constructor: `overlay.cfg` stores the top-left corner, and a later
   style change keeps the center, so creating it with the wrong size would move the HUD on every start.
 

@@ -46,7 +46,12 @@ public partial class MainForm
 
 	private const int FullWidth = 480;
 
-	private const int FullHeight = 720;
+	// The full window is resizable in height only, between half and all of the original 720 px; the pages scroll.
+	private const int DefaultHeight = 576;
+
+	private const int MinHeight = 360;
+
+	private const int MaxHeight = 720;
 
 	private const int CompactWidth = 420;
 
@@ -2339,10 +2344,33 @@ public partial class MainForm
 		pageHost.Visible = !on;
 		root.RowStyles[4].Height = (on ? CompactBodyHeight : 0);
 		compactPanel.Visible = on;
-		ClientSize = (on ? new Size(CompactWidth, CompactBodyHeight + StatusHeight) : new Size(FullWidth, FullHeight));
+		SetWindowSize();
 		root.ResumeLayout();
 		ResumeLayout();
 		RefreshCompact();
+	}
+
+	private int FullHeight => ((settings.WindowHeight == 0) ? DefaultHeight : Math.Clamp(settings.WindowHeight, MinHeight, MaxHeight));
+
+	// Sizes the window for the current mode and sets the limits the user can drag it to (none in compact).
+	private void SetWindowSize()
+	{
+		MinimumSize = Size.Empty;
+		MaximumSize = Size.Empty;
+		ClientSize = (compact ? new Size(CompactWidth, CompactBodyHeight + StatusHeight) : new Size(FullWidth, FullHeight));
+		Size frame = Size - ClientSize;
+		MinimumSize = (compact ? Size : new Size(Size.Width, MinHeight + frame.Height));
+		MaximumSize = (compact ? Size : new Size(Size.Width, MaxHeight + frame.Height));
+	}
+
+	protected override void OnResizeEnd(EventArgs e)
+	{
+		base.OnResizeEnd(e);
+		if (!compact && ClientSize.Height != FullHeight)
+		{
+			settings.WindowHeight = ClientSize.Height;
+			SaveSettingsSoon();
+		}
 	}
 
 	private void RefreshCompact()

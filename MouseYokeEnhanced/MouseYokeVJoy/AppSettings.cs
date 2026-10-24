@@ -48,6 +48,9 @@ public class AppSettings
 
 	public bool Compact { get; set; }
 
+	// Client height of the full window in pixels, as the user dragged it; 0 means the default.
+	public int WindowHeight { get; set; }
+
 	public static AppSettings Load()
 	{
 		try

@@ -209,9 +209,9 @@ public partial class MainForm : Form
 		Text = "MouseYokeEnhanced";
 		Icon = BrandIcon.Window(active: false);
 		AutoScaleMode = AutoScaleMode.Font;
-		ClientSize = new Size(FullWidth, FullHeight);
-		FormBorderStyle = FormBorderStyle.FixedSingle;
+		FormBorderStyle = FormBorderStyle.Sizable;
 		MaximizeBox = false;
+		SetWindowSize();
 		BackColor = Theme.Bg;
 		ForeColor = Theme.Text;
 		Font = Theme.Body;
@@ -1311,5 +1311,44 @@ public partial class MainForm : Form
 			}
 		}
 		base.WndProc(ref m);
+		if (m.Msg == WM_NCHITTEST)
+		{
+			m.Result = SizingHit((int)m.Result);
+		}
+	}
+
+	private const int WM_NCHITTEST = 132;
+
+	private const int HTLEFT = 10;
+
+	private const int HTRIGHT = 11;
+
+	private const int HTTOP = 12;
+
+	private const int HTTOPLEFT = 13;
+
+	private const int HTTOPRIGHT = 14;
+
+	private const int HTBOTTOM = 15;
+
+	private const int HTBOTTOMLEFT = 16;
+
+	private const int HTBOTTOMRIGHT = 17;
+
+	private const int HTBORDER = 18;
+
+	// The width is fixed, so the side edges and corners resize only vertically (or not at all in compact),
+	// and the cursor doesn't offer a horizontal resize that would do nothing.
+	private int SizingHit(int hit)
+	{
+		if (hit < HTLEFT || hit > HTBOTTOMRIGHT)
+		{
+			return hit;
+		}
+		if (compact || hit == HTLEFT || hit == HTRIGHT)
+		{
+			return HTBORDER;
+		}
+		return ((hit == HTTOPLEFT || hit == HTTOPRIGHT) ? HTTOP : ((hit == HTBOTTOMLEFT || hit == HTBOTTOMRIGHT) ? HTBOTTOM : hit));
 	}
 }
