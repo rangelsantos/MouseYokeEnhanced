@@ -2577,7 +2577,7 @@ public partial class MainForm
 			Visible = false
 		};
 		ContextMenuStrip m = DarkMenuRenderer.NewMenu();
-		ToolStripMenuItem show = new ToolStripMenuItem("Show MouseYoke", null, (object? s, EventArgs e) =>
+		ToolStripMenuItem show = new ToolStripMenuItem("Show MouseYokeEnhanced", null, (object? s, EventArgs e) =>
 		{
 			ShowFromTray();
 		})

@@ -80,7 +80,7 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "Unzip \`MouseYokeEnhanced-v$VERSION.zip\` anywhere you can write to (not Program Files) and run \`MouseYokeVJoy.exe\`."
+            echo "Unzip \`MouseYokeEnhanced-v$VERSION.zip\` anywhere you can write to (not Program Files) and run \`MouseYokeEnhanced.exe\`."
             echo "Needs the .NET 8 Desktop Runtime (x64) and vJoy (device 1). See \`MouseYokeEnhanced_Manual.md\`."
           } > notes.md
           gh release create "v$VERSION" "MouseYokeEnhanced-v$VERSION.zip" --target "$GITHUB_SHA" --latest \

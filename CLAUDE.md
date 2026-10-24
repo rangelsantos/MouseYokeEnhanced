@@ -10,7 +10,9 @@ The user writes in Portuguese (pt-BR). The app UI and the manual are in English;
 
 - `MouseYoke/` — the **original shipped binaries** (exe, dll, pdb, `vJoyInterface.dll`, manual). Reference
   only: never edit. The build copies `vJoyInterface.dll` from here.
-- `MouseYokeEnhanced/` — the source we work on (`MouseYokeVJoy.csproj`, code in `MouseYokeVJoy/`).
+- `MouseYokeEnhanced/` — the source we work on (`MouseYokeVJoy.csproj`, code in `MouseYokeVJoy/`). The
+  project and namespace keep the original name, but the assembly is `MouseYokeEnhanced` (the exe is
+  `MouseYokeEnhanced.exe`).
 - `README.md` — the GitHub presentation page (logo, screenshots, highlights, quick start). It is
   **not** the manual: it links to `MouseYokeEnhanced/MouseYokeEnhanced_Manual.md`, which is copied next to the
   exe. When a feature changes, update the manual, and the README if it mentions it. Both UTF-8.

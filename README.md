@@ -115,7 +115,7 @@ it worked even with the window hidden behind the sim.
 
 <img src="docs/images/compact.png" width="420" alt="Compact window">
 
-Shrink MouseYoke to a strip with just the essentials, for a second screen, or drag the full window
+Shrink MouseYokeEnhanced to a strip with just the essentials, for a second screen, or drag the full window
 shorter on a small screen (the tabs scroll and the height is remembered). With **Close to tray**,
 closing the window keeps it running with your keys working. Right-click the tray icon to show
 the window, start or stop flying, or exit. A red dot on the icon, in the tray and on the taskbar,
@@ -145,13 +145,13 @@ All of them can be changed on the **Keys** tab, per aircraft profile.
    and restart if asked.
 2. **Configure vJoy** (once): open *Configure vJoy*, select **Device 1**, tick **X**, **Y** and
    **Z**, set **16** buttons, and apply.
-3. **Start MouseYoke** (`MouseYokeVJoy.exe`). The status bar should say **Ready. F9 to fly.**
+3. **Start MouseYokeEnhanced** (`MouseYokeEnhanced.exe`). The status bar should say **Ready. F9 to fly.**
 4. **Bind the axes in the sim** (once): *Options → Controls & Sensitivity*, pick **vJoy Device**,
    and assign **Ailerons** (mouse left/right), **Elevator** (mouse up/down) and, if you use keyboard
    rudder, **Rudder** (hold a rudder key).
 
 Run the sim in **windowed** or **borderless** mode, and don't run it as Administrator, or
-MouseYoke can't see your keys.
+MouseYokeEnhanced can't see your keys.
 
 📖 The full **[user manual](MouseYokeEnhanced/MouseYokeEnhanced_Manual.md)** covers every option and has a
 *Quick fixes* section.

@@ -28,7 +28,7 @@ internal static class Program
 		}
 		catch (Exception ex) when (ex is DllNotFoundException || ex is BadImageFormatException || ex is EntryPointNotFoundException)
 		{
-			MessageBox.Show("MouseYoke can't start because vJoyInterface.dll is missing or damaged.\n\nPut vJoyInterface.dll back in the MouseYoke folder (it comes with the app). If you haven't installed vJoy yet, get it from:\nhttps://github.com/jshafer817/vJoy/releases", "MouseYokeEnhanced", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+			MessageBox.Show("MouseYokeEnhanced can't start because vJoyInterface.dll is missing or damaged.\n\nPut vJoyInterface.dll back in the MouseYokeEnhanced folder (it comes with the app). If you haven't installed vJoy yet, get it from:\nhttps://github.com/jshafer817/vJoy/releases", "MouseYokeEnhanced", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 			return false;
 		}
 	}

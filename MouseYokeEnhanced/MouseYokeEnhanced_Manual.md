@@ -2,7 +2,7 @@
 
 **Fly Microsoft Flight Simulator using just your mouse and keyboard — no joystick needed.**
 
-MouseYoke turns your mouse into the plane's control stick: move it to roll and pitch, and
+MouseYokeEnhanced turns your mouse into the plane's control stick: move it to roll and pitch, and
 the plane responds. It's made for people who don't have a joystick or yoke but still want
 smooth, enjoyable control — especially during takeoff and landing.
 
@@ -33,12 +33,12 @@ That's it.
 4. Find **Number of Buttons** and set it to **16**.
 5. Click **Apply**, then **OK**. You can close this — you won't need it again.
 
-### Step 3 — Start MouseYoke
+### Step 3 — Start MouseYokeEnhanced
 
-Double-click **MouseYokeVJoy** in the folder.
+Double-click **MouseYokeEnhanced** (`MouseYokeEnhanced.exe`) in the folder.
 
 - If Windows shows a blue "Windows protected your PC" box, click **More info**, then **Run anyway**. (This just happens with small apps that aren't from big companies — it's safe.)
-- If it says it needs ".NET," Windows will point you to a quick free download from Microsoft. Install it, then start MouseYoke again.
+- If it says it needs ".NET," Windows will point you to a quick free download from Microsoft. Install it, then start MouseYokeEnhanced again.
 
 The app should say **"Ready. F9 to fly."** in the status bar at the bottom.
 
@@ -50,7 +50,7 @@ The **ⓘ** button next to it opens **About**: the version you have, the credits
 GitHub repository, its Releases page and this manual. **Copy info** copies your version and vJoy setup,
 ready to paste into a bug report.
 
-- If it says **vJoyInterface.dll is missing**, put that file back in the MouseYoke folder (it
+- If it says **vJoyInterface.dll is missing**, put that file back in the MouseYokeEnhanced folder (it
   comes with the app).
 
 ### Step 4 — Tell Flight Simulator about it (do this once)
@@ -70,7 +70,7 @@ ready to paste into a bug report.
 
 ## How to fly
 
-1. Keep MouseYoke open (on a second screen, or just behind the sim).
+1. Keep MouseYokeEnhanced open (on a second screen, or just behind the sim).
 2. Press **F9** (or click the big **Activate** button) to start flying with the mouse. Press **F9**
    again to stop (handy when you need to click buttons in the cockpit).
 
@@ -83,7 +83,7 @@ The window has four tabs:
 - **HUD** — the on-screen display, plus a few window options.
 
 On a small screen, drag the top or bottom edge of the window to make it shorter (down to half of
-its tallest size); the tabs scroll. MouseYoke remembers the height for next time.
+its tallest size); the tabs scroll. MouseYokeEnhanced remembers the height for next time.
 
 While you're flying, the pointer stays on your main screen, so it can't slip onto another
 monitor and throw the controls to one side. Press **F9** to stop, and it's free again.
@@ -228,7 +228,7 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
   in the app) when it's in place. **Reset position** puts it back at the top of your main screen.
 
 When you press F9, reset the trim or center the stick, the HUD briefly shows **ACTIVE**,
-**STANDBY**, **TRIM RESET** or **CENTER**, so you know it worked even when the MouseYoke window is hidden behind the sim.
+**STANDBY**, **TRIM RESET** or **CENTER**, so you know it worked even when the MouseYokeEnhanced window is hidden behind the sim.
 
 The HUD settings are the same for every aircraft profile.
 
@@ -238,12 +238,12 @@ The HUD settings are the same for every aircraft profile.
 
 At the bottom of the **HUD** tab:
 
-- **Always on top** — keeps the MouseYoke window above other windows.
-- **Close to tray** — closing the window keeps MouseYoke running (your keys keep working) with
+- **Always on top** — keeps the MouseYokeEnhanced window above other windows.
+- **Close to tray** — closing the window keeps MouseYokeEnhanced running (your keys keep working) with
   an icon next to the clock. Right-click the icon to show the window, start or stop flying, or
   exit. While you're flying, the icon (next to the clock and on the taskbar) shows a small red
   dot.
-- **Compact window** — shrinks MouseYoke to a small strip with just the essentials (flying or
+- **Compact window** — shrinks MouseYokeEnhanced to a small strip with just the essentials (flying or
   standby, the profile, the stick and the trim). Click **Expand** to get the full window back.
 
 ---
@@ -273,17 +273,21 @@ before you fly.
 
 New versions (v1.0, v1.1…) are on the
 **[Releases page](https://github.com/rangelsantos/MouseYokeEnhanced/releases/latest)**. Download
-`MouseYokeEnhanced-v<version>.zip`, close MouseYoke (right-click the tray icon → Exit if it's in
+`MouseYokeEnhanced-v<version>.zip`, close MouseYokeEnhanced (right-click the tray icon → Exit if it's in
 the tray), and unzip it over your old **MouseYokeEnhanced** folder, replacing the files. Your
 profiles and settings are kept: they live in that folder and the zip doesn't include any. To see
 which version you have, click **ⓘ** at the top right; **Releases** there opens the
 Releases page.
 
+The app is now started with **MouseYokeEnhanced.exe**. If your folder still has the old
+**MouseYokeVJoy** files (`MouseYokeVJoy.exe`, `.dll`, `.pdb`, `.deps.json`, `.runtimeconfig.json`)
+from an earlier version, you can delete them.
+
 ---
 
 ## Quick fixes
 
-- **The plane doesn't move in the sim.** Make sure MouseYoke is open and you pressed **F9**.
+- **The plane doesn't move in the sim.** Make sure MouseYokeEnhanced is open and you pressed **F9**.
   Double-check you set the axes in Step 4, and that the sim is in windowed or borderless mode.
 - **My keys don't do anything.** Don't run Flight Simulator "as Administrator" — that stops
   the app from seeing your keys. Just start it normally. Also check the **Keys** tab: make
@@ -297,9 +301,9 @@ Releases page.
   **hold** your rudder key at the moment the sim asks you to move an axis. Also make sure you
   ticked **Z** in vJoy (Step 2; the vJoy chip at the top shows **XYZ** when it's on) and turned on
   **Keyboard rudder** on the Keys tab.
-- **"Not saved" at the bottom right.** MouseYoke couldn't write your profile. Move the
-  MouseYoke folder somewhere you can write to (for example Documents, not Program Files).
-- **The pointer got stuck invisible after a crash.** Just start MouseYoke again and press
+- **"Not saved" at the bottom right.** MouseYokeEnhanced couldn't write your profile. Move the
+  MouseYokeEnhanced folder somewhere you can write to (for example Documents, not Program Files).
+- **The pointer got stuck invisible after a crash.** Just start MouseYokeEnhanced again and press
   F9 on and off, or lock and unlock your PC (Windows key + L). Your cursor comes right back.
 
 ---

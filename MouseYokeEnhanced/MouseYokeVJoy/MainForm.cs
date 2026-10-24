@@ -263,7 +263,7 @@ public partial class MainForm : Form
 		if (!VJoy.vJoyEnabled())
 		{
 			SetStatus("vJoy driver not enabled. Install/enable vJoy, then restart.", Color.IndianRed);
-			SetVjoyChip("vJoy off", ChipKind.Bad, "The vJoy driver isn't installed or is turned off.\n\nInstall vJoy (see the manual), restart the PC if it asks, then start MouseYoke again.");
+			SetVjoyChip("vJoy off", ChipKind.Bad, "The vJoy driver isn't installed or is turned off.\n\nInstall vJoy (see the manual), restart the PC if it asks, then start MouseYokeEnhanced again.");
 			btnToggle.Enabled = false;
 			return;
 		}
@@ -363,7 +363,7 @@ public partial class MainForm : Form
 		bool ok = ProfileManager.Save(profile);
 		lblSaved.Text = (ok ? "Saved" : "Not saved");
 		lblSaved.ForeColor = (ok ? Theme.Faint : Theme.Bad);
-		toolTip.SetToolTip(lblSaved, ok ? null : ("Couldn't write the profile to " + ProfileManager.DirPath + ". Move MouseYoke to a folder you can write to (not Program Files)."));
+		toolTip.SetToolTip(lblSaved, ok ? null : ("Couldn't write the profile to " + ProfileManager.DirPath + ". Move MouseYokeEnhanced to a folder you can write to (not Program Files)."));
 	}
 
 	private void FlushSave()
@@ -519,7 +519,7 @@ public partial class MainForm : Form
 		using OpenFileDialog dlg = new OpenFileDialog
 		{
 			Title = "Import profile",
-			Filter = "MouseYoke profile (*.json)|*.json|All files (*.*)|*.*"
+			Filter = "MouseYokeEnhanced profile (*.json)|*.json|All files (*.*)|*.*"
 		};
 		if (dlg.ShowDialog(this) != DialogResult.OK)
 		{
@@ -528,7 +528,7 @@ public partial class MainForm : Form
 		Profile p = ProfileManager.Import(dlg.FileName);
 		if (p == null)
 		{
-			MessageBox.Show("That file isn't a MouseYoke profile, or it can't be read.", "MouseYokeEnhanced", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			MessageBox.Show("That file isn't a MouseYokeEnhanced profile, or it can't be read.", "MouseYokeEnhanced", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 			return;
 		}
 		p.Buttons ??= new List<ButtonBinding>();
@@ -542,7 +542,7 @@ public partial class MainForm : Form
 		using SaveFileDialog dlg = new SaveFileDialog
 		{
 			Title = "Export profile",
-			Filter = "MouseYoke profile (*.json)|*.json",
+			Filter = "MouseYokeEnhanced profile (*.json)|*.json",
 			FileName = profile.Name + ".json"
 		};
 		if (dlg.ShowDialog(this) == DialogResult.OK)
@@ -1226,7 +1226,7 @@ public partial class MainForm : Form
 			if (!trayHintShown)
 			{
 				trayHintShown = true;
-				tray.ShowBalloonTip(3000, "MouseYoke is still running", "Your keys keep working. Right-click this icon to exit.", ToolTipIcon.Info);
+				tray.ShowBalloonTip(3000, "MouseYokeEnhanced is still running", "Your keys keep working. Right-click this icon to exit.", ToolTipIcon.Info);
 			}
 			return;
 		}

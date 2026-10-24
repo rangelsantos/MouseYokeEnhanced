@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="1.0.0.0" name="MouseYokeVJoy.app"/>
+  <assemblyIdentity version="1.0.0.0" name="MouseYokeEnhanced.app"/>
 
   <!-- Run at the user's integrity level (no admin needed for vJoy or the keyboard hook,
        as long as MSFS is NOT run as administrator). -->
