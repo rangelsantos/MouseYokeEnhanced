@@ -731,7 +731,7 @@ internal sealed class ActivateButton : Button
 	}
 }
 
-// The aircraft profile button in the top bar: "Aircraft  <name>  ▾".
+// The profile button in the top bar: "Profile  <name>  ▾".
 internal sealed class ProfileButton : Button
 {
 	private bool hover;
@@ -747,7 +747,7 @@ internal sealed class ProfileButton : Button
 		set
 		{
 			profileName = value ?? "";
-			Text = "Aircraft profile: " + profileName;
+			Text = "Profile: " + profileName;
 			Invalidate();
 		}
 	}
@@ -784,8 +784,8 @@ internal sealed class ProfileButton : Button
 			using SolidBrush b = new SolidBrush(hover ? Color.FromArgb(54, 54, 66) : Theme.Input);
 			g.FillPath(b, p);
 		}
-		Size ls = TextRenderer.MeasureText(g, "Aircraft", Theme.Small, Size.Empty, TextFormatFlags.NoPadding);
-		TextRenderer.DrawText(g, "Aircraft", Theme.Small, new Rectangle(10, 0, ls.Width + 2, Height), Theme.Muted, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+		Size ls = TextRenderer.MeasureText(g, "Profile", Theme.Small, Size.Empty, TextFormatFlags.NoPadding);
+		TextRenderer.DrawText(g, "Profile", Theme.Small, new Rectangle(10, 0, ls.Width + 2, Height), Theme.Muted, TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 		int nx = 10 + ls.Width + 8;
 		TextRenderer.DrawText(g, profileName, Theme.Strong, new Rectangle(nx, 0, Width - nx - 24, Height), Color.White, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
 		TextRenderer.DrawText(g, "▾", Theme.Body, new Rectangle(Width - 22, 0, 16, Height), Theme.Muted, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
@@ -910,7 +910,7 @@ internal sealed class StickMonitor : PaintedControl
 	}
 }
 
-// The response curve on the Feel tab: Shape() for the current deadzone/expo, with a dot for the live input.
+// The response curve on the Stick tab: Shape() for the current deadzone/expo, with a dot for the live input.
 internal sealed class CurveView : PaintedControl
 {
 	private const float W = 300f;

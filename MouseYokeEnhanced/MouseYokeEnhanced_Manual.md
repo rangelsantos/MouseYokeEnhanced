@@ -40,15 +40,18 @@ Double-click **MouseYokeEnhanced** (`MouseYokeEnhanced.exe`) in the folder.
 - If Windows shows a blue "Windows protected your PC" box, click **More info**, then **Run anyway**. (This just happens with small apps that aren't from big companies — it's safe.)
 - If it says it needs ".NET," Windows will point you to a quick free download from Microsoft. Install it, then start MouseYokeEnhanced again.
 
-The app should say **"Ready. F9 to fly."** in the status bar at the bottom.
+The app should say **"Ready."** in the status bar at the bottom, and the big **Activate** button shows
+your fly key (**F9**).
 
-The chip at the top right shows how vJoy is set up, for example **vJoy 1 · XYZ · 16** (device 1,
-axes X, Y and Z, 16 buttons). Green means all good. If it turns amber or red, click it: it tells
-you what's missing and how to fix it in Configure vJoy.
+The chip at the top right checks vJoy for you. Green **vJoy ready** means all good. Amber
+**vJoy needs setup** or a red chip means something is missing: click it to see what, and how to
+fix it in Configure vJoy. Hover over it (or click it) for the details: device 1, which axes are
+on, and how many buttons it has.
 
-The **ⓘ** button next to it opens **About**: the version you have, the credits, and links to the
-GitHub repository, its Releases page and this manual. **Copy info** copies your version and vJoy setup,
-ready to paste into a bug report.
+The **⚙** button next to it opens a small menu with the window options (see **Window options**
+below) and **About MouseYokeEnhanced…**: the version you have, the credits, and links to the
+GitHub repository, its Releases page and this manual. **Copy info** copies your version and vJoy
+setup, ready to paste into a bug report.
 
 - If it says **vJoyInterface.dll is missing**, put that file back in the MouseYokeEnhanced folder (it
   comes with the app).
@@ -64,7 +67,7 @@ ready to paste into a bug report.
    - **Rudder Axis** → (only if you'll use keyboard rudder — see below) hold your rudder key.
 5. Save. You're done setting up.
 
-> Tip: if a control moves the wrong way, tick **Invert pitch** or **Invert roll** on the **Feel** tab, or use the sim's own "reverse" switch for that axis.
+> Tip: if a control moves the wrong way, turn on **Invert pitch** or **Invert roll** on the **Stick** tab, or use the sim's own "reverse" switch for that axis.
 
 ---
 
@@ -78,9 +81,13 @@ The window has four tabs:
 
 - **Fly** — what's happening right now: a live picture of the stick, the trim and the rudder,
   lights for the vJoy buttons, and the keys you're using.
-- **Feel** — how the stick responds: the stick mode and the sliders.
+- **Stick** — how the stick responds: the stick mode, the sliders, invert, trim speed and
+  keyboard rudder.
 - **Keys** — every key: the commands (trim, rudder…) and the keys you mapped to vJoy buttons.
-- **HUD** — the on-screen display, plus a few window options.
+- **HUD** — the on-screen display.
+
+Settings marked **per profile** are saved with the current profile, so each aircraft can have its
+own (see **Profiles**). Those marked **all profiles**, like the HUD, are the same for every one.
 
 On a small screen, drag the top or bottom edge of the window to make it shorter (down to half of
 its tallest size); the tabs scroll. MouseYokeEnhanced remembers the height for next time.
@@ -118,7 +125,8 @@ rudder.
 
 ## Changing your keys
 
-Open the **Keys** tab and pick **Commands**. Every keyboard command is listed there.
+Open the **Keys** tab and pick **Commands**. Every keyboard command is listed there, in three
+groups: **Flight**, **Trim** and **Rudder**.
 
 1. Click the key next to a command. It changes to **Press a key…**
 2. Press the key you want to use. A mouse button works too: right, middle, or the two side
@@ -138,13 +146,13 @@ they were.
 If a command key is also mapped to a vJoy button, both lists show a warning saying what will
 happen (usually the command wins and the button won't fire; for the rudder keys, both happen).
 
-Your keys are saved with the aircraft profile, so each plane can have its own.
+Your keys are saved with the profile, so each plane can have its own.
 
 ---
 
 ## Two ways to fly — pick what feels best
 
-At the top of the **Feel** tab you choose the **stick mode**:
+At the top of the **Stick** tab you choose the **stick mode**:
 
 - **Direct (default):** the mouse's position on screen is the control position. Precise, but
   you have to bring the mouse back to the middle yourself.
@@ -152,9 +160,9 @@ At the top of the **Feel** tab you choose the **stick mode**:
   springs back to center on its own. Most people find this **much** easier for takeoff and
   landing. Turn on **Hide cursor** too (see below) for the best experience.
 
-Try both and keep whichever you like. You can set it differently for each aircraft (see Profiles).
+Try both and keep whichever you like. You can set it differently for each profile (see Profiles).
 
-Below the modes, **Hold stick position** keeps the stick where it is when you press F9, both
+Right under the modes, **Hold stick position** keeps the stick where it is when you press F9, both
 ways. Stop flying in a turn and the sim keeps getting that same turn; start again and the stick
 picks up from there, with the pointer put back where it was. Without it, the stick goes to the
 middle when you stop and starts from the middle when you fly again. Either way, **Center stick**
@@ -164,20 +172,31 @@ brings it back to the middle whenever you like.
 
 ## Making it feel just right
 
-On the **Feel** tab you'll find some sliders, each with its value next to it. You don't need to
+The rest of the **Stick** tab is sliders, each with its value next to it. You don't need to
 understand them all — just nudge and see what feels good. **Double-click** a slider to put it
 back to its starting value; the arrow keys move it one step at a time. Rough starting points:
 
+**Response** — for both modes:
+
 - **Sensitivity** — higher = more responsive, lower = gentler. Big airliners like it gentle.
 - **Expo** — makes small movements gentle and big movements strong. Great for smooth landings. Try 40–50.
-- **Deadzone** — (Direct mode only) a small "dead" spot in the middle so the plane sits still when you're not moving.
-- **Smoothing** — (Direct mode only) smooths out shaky input.
-- **Auto-center** — (Spring mode only) how quickly the stick springs back to center.
-- **Trim rate** — how fast the trim moves while you hold a trim key.
+- **Invert roll / Invert pitch** — flip an axis that moves the wrong way.
 
-Sliders that don't apply to the mode you picked are grayed out. The **Response** graph above
-them shows what Expo and Deadzone do: the dashed line is a plain, linear response, and while
-you're flying a green dot shows where your mouse is on the curve.
+The graph at the top of **Response** shows what Expo and Deadzone do: the dashed line is a plain,
+linear response, and while you're flying a green dot shows where your mouse is on the curve.
+
+Below it, a box with the settings that only matter for the mode you picked (the other mode's
+are hidden):
+
+- **Direct mode:** **Deadzone**, a small "dead" spot in the middle so the plane sits still when
+  you're not moving, and **Smoothing**, which smooths out shaky input.
+- **Spring mode:** **Auto-center**, how quickly the stick springs back to center.
+
+**Trim & rudder**, at the bottom:
+
+- **Trim rate** — how fast the trim moves while you hold a trim key.
+- **Keyboard rudder** — see **Handy extras** below.
+- **Rudder rate** — how fast the keyboard rudder moves out and comes back to center.
 
 ---
 
@@ -186,9 +205,10 @@ you're flying a green dot shows where your mouse is on the curve.
 - **Hide cursor** — (switch on the **Fly** tab) hides the mouse pointer while flying so it's not
   floating in your view. Recommended, especially in spring mode. It comes back the moment you
   press F9 to stop.
-- **Rudder on your keyboard** — on the **Keys** tab, under **Commands → Rudder**, turn on
-  **Keyboard rudder** and you get smooth rudder without a joystick. The rudder keys
-  (**Comma ,** and **Period .** to start with) and the rudder speed are right there too.
+- **Rudder on your keyboard** — on the **Stick** tab, under **Trim & rudder**, turn on
+  **Keyboard rudder** and you get smooth rudder without a joystick; **Rudder rate** sets its
+  speed. The rudder keys (**Comma ,** and **Period .** to start with) are on the **Keys** tab,
+  under **Commands → Rudder**, which also tells you when keyboard rudder is off.
   (Remember to bind Rudder Axis in the sim, Step 4 above.)
 - **Freelook** — give **Freelook (hold)** a key or mouse button on the Keys tab. Hold it to take
   your mouse off the stick for a moment: the stick and the trim stay put, the pointer stays
@@ -214,29 +234,34 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
   turn coordinator's). The preview at the top shows it.
 - **Size** (50–250%) and **Opacity**.
 - **Elements** — the rudder, the pitch trim and the roll trim each have **Auto**, **Show** or
-  **Hide**. **Auto** (the default) shows an element only when this aircraft uses it: the rudder
+  **Hide**. **Auto** (the default) shows an element only when this profile uses it: the rudder
   when **Keyboard rudder** is on, a trim when it has a key. A trim that is still applied stays on
   the HUD even after you remove its keys. The HUD closes up around what's hidden, so it gets
   smaller. **Show** always draws it (the rudder says **OFF** when it isn't on); **Hide** never
   does. The line under each name says what Auto is doing right now. The stick picture on the Fly
   tab always shows everything.
+Under **Display**:
+
 - **Show HUD** — turn it off if you don't want a HUD at all (also on the Fly tab).
-- **Show numbers** — the trim and rudder values under the Sidestick HUD.
+- **Show numbers** — the trim and rudder values on the Sidestick and Classic HUDs (the Strip
+  always shows its trim values, since they are its only roll trim display).
 - **Fade when centered** — the HUD dims while the stick is at rest, so it stays out of the way.
 - **Show in standby** — keep the HUD on screen (grayed) when you're not flying.
+Under **Position**:
+
 - **Position HUD…** — shows the HUD so you can drag it anywhere. Click **Done** (on the HUD or
   in the app) when it's in place. **Reset position** puts it back at the top of your main screen.
 
 When you press F9, reset the trim or center the stick, the HUD briefly shows **ACTIVE**,
 **STANDBY**, **TRIM RESET** or **CENTER**, so you know it worked even when the MouseYokeEnhanced window is hidden behind the sim.
 
-The HUD settings are the same for every aircraft profile.
+The HUD settings are the same for every profile.
 
 ---
 
 ## Window options
 
-At the bottom of the **HUD** tab:
+In the **⚙** menu at the top right (a check mark shows what's on):
 
 - **Always on top** — keeps the MouseYokeEnhanced window above other windows.
 - **Close to tray** — closing the window keeps MouseYokeEnhanced running (your keys keep working) with
@@ -248,12 +273,12 @@ At the bottom of the **HUD** tab:
 
 ---
 
-## Aircraft profiles
+## Profiles
 
-Fly more than one plane? You can save a **profile per aircraft** — each remembers its own feel,
-its own extra buttons and its own keys.
+Fly more than one plane? You can save a **profile** for each aircraft — each remembers its own
+feel, its own extra buttons and its own keys (everything marked **per profile** in the app).
 
-Click the **Aircraft** button at the top to switch profiles. The **⋯** button next to it has the
+Click the **Profile** button at the top to switch profiles. The **⋯** button next to it has the
 rest:
 
 - **New profile** — start a fresh profile.
@@ -276,7 +301,8 @@ New versions (v1.0, v1.1…) are on the
 `MouseYokeEnhanced-v<version>.zip`, close MouseYokeEnhanced (right-click the tray icon → Exit if it's in
 the tray), and unzip it over your old **MouseYokeEnhanced** folder, replacing the files. Your
 profiles and settings are kept: they live in that folder and the zip doesn't include any. To see
-which version you have, click **ⓘ** at the top right; **Releases** there opens the
+which version you have, click **⚙** at the top right → **About MouseYokeEnhanced…**; **Releases**
+there opens the
 Releases page.
 
 The app is now started with **MouseYokeEnhanced.exe**. If your folder still has the old
@@ -291,7 +317,7 @@ from an earlier version, you can delete them.
   Double-check you set the axes in Step 4, and that the sim is in windowed or borderless mode.
 - **My keys don't do anything.** Don't run Flight Simulator "as Administrator" — that stops
   the app from seeing your keys. Just start it normally. Also check the **Keys** tab: make
-  sure the command has a key (not "Not set") and that you picked the right aircraft profile.
+  sure the command has a key (not "Not set") and that you picked the right profile.
 - **A key does two things at once, or a button never fires.** If the same key is a command and
   an extra button, the Keys tab shows a warning on both. The command wins (for the rudder keys,
   both happen). Give one of them a different key.
@@ -299,8 +325,8 @@ from an earlier version, you can delete them.
   **F9** to stop, and the pointer can go anywhere again.
 - **The rudder won't set up in the sim.** The rudder only appears while it's moving, so
   **hold** your rudder key at the moment the sim asks you to move an axis. Also make sure you
-  ticked **Z** in vJoy (Step 2; the vJoy chip at the top shows **XYZ** when it's on) and turned on
-  **Keyboard rudder** on the Keys tab.
+  ticked **Z** in vJoy (Step 2; if it's off, the vJoy chip at the top says **vJoy needs setup**)
+  and turned on **Keyboard rudder** on the Stick tab.
 - **"Not saved" at the bottom right.** MouseYokeEnhanced couldn't write your profile. Move the
   MouseYokeEnhanced folder somewhere you can write to (for example Documents, not Program Files).
 - **The pointer got stuck invisible after a crash.** Just start MouseYokeEnhanced again and press
@@ -318,7 +344,7 @@ and the app this version builds on. Joystick output goes through
 
 If MouseYokeEnhanced makes your flights better, you can
 [buy me a coffee](https://ko-fi.com/rangelsantosss) ☕ on Ko-fi or [sponsor it](https://github.com/sponsors/rangelsantos) on GitHub (also in
-**ⓘ** → **Buy me a coffee**).
+**⚙** → **About MouseYokeEnhanced…** → **Buy me a coffee**).
 
 ---
 

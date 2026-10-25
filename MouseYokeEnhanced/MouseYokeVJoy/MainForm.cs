@@ -125,7 +125,7 @@ public partial class MainForm : Form
 
 	private bool freelook;
 
-	// The roll input before shaping, for the dot on the Feel curve.
+	// The roll input before shaping, for the dot on the Stick curve.
 	private double curveInput;
 
 	private bool trimUpHeld;
@@ -308,8 +308,8 @@ public partial class MainForm : Form
 			problems.Add("Device 1 has no buttons, so key → button mappings do nothing. Set Number of Buttons to 16 in Configure vJoy.");
 		}
 		string summary = "Driver enabled · Device 1 acquired\nAxes: X " + Mark(x) + "  Y " + Mark(y) + "  Z " + Mark(z) + "\nButtons: " + Math.Max(n, 0);
-		SetVjoyChip("vJoy 1 · " + ((axes.Length > 0) ? axes : "no axes") + " · " + Math.Max(n, 0), (problems.Count == 0) ? ChipKind.Ok : ChipKind.Warn, summary + ((problems.Count > 0) ? ("\n\n" + string.Join("\n\n", problems)) : ""));
-		SetStatus((profile.ToggleVk != 0) ? ("Ready. " + Profile.KeyName(profile.ToggleVk) + " to fly. Key bindings are live whenever the app runs.") : "Ready. Set a Fly / standby key on the Keys tab.", Theme.Muted);
+		SetVjoyChip((problems.Count == 0) ? "vJoy ready" : "vJoy needs setup", (problems.Count == 0) ? ChipKind.Ok : ChipKind.Warn, summary + ((problems.Count > 0) ? ("\n\n" + string.Join("\n\n", problems)) : ""));
+		SetStatus((profile.ToggleVk != 0) ? "Ready. Key bindings are live whenever the app runs." : "Ready. Set a Fly / standby key on the Keys tab.", Theme.Muted);
 		foreach (ButtonBinding b in profile.Buttons)
 		{
 			if (b.Button > vjoyButtonCount)
@@ -344,8 +344,8 @@ public partial class MainForm : Form
 			profile.Smoothing = tbSmooth.Value;
 			profile.CenterSpeed = tbCenterSpeed.Value;
 			profile.TrimRate = tbTrimRate.Value;
-			profile.InvertPitch = cbInvertPitch.Checked;
-			profile.InvertRoll = cbInvertRoll.Checked;
+			profile.InvertPitch = swInvertPitch.Checked;
+			profile.InvertRoll = swInvertRoll.Checked;
 			profile.HideCursor = swHideCursor.Checked;
 			profile.SelfCenter = SpringMode;
 			profile.HoldPosition = swHoldPosition.Checked;
@@ -442,7 +442,7 @@ public partial class MainForm : Form
 
 	private void NewProfile()
 	{
-		string name = Prompt("New profile", "Aircraft / profile name:", "New Aircraft");
+		string name = Prompt("New profile", "Profile name:", "New profile");
 		if (!string.IsNullOrWhiteSpace(name))
 		{
 			ReplaceProfile(new Profile
@@ -1064,11 +1064,11 @@ public partial class MainForm : Form
 			double expo = (double)tbExpo.Value / 100.0;
 			double ox = Shape(springX, 0.0, expo);
 			double oy = Shape(springY, 0.0, expo);
-			if (cbInvertRoll.Checked)
+			if (swInvertRoll.Checked)
 			{
 				ox = 0.0 - ox;
 			}
-			if (cbInvertPitch.Checked)
+			if (swInvertPitch.Checked)
 			{
 				oy = 0.0 - oy;
 			}
@@ -1091,11 +1091,11 @@ public partial class MainForm : Form
 			double expo2 = (double)tbExpo.Value / 100.0;
 			nx = Shape(nx, dz, expo2);
 			ny = Shape(ny, dz, expo2);
-			if (cbInvertRoll.Checked)
+			if (swInvertRoll.Checked)
 			{
 				nx = 0.0 - nx;
 			}
-			if (cbInvertPitch.Checked)
+			if (swInvertPitch.Checked)
 			{
 				ny = 0.0 - ny;
 			}

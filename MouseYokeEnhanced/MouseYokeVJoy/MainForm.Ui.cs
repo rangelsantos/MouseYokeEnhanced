@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace MouseYokeVJoy;
 
-// The screens: a fixed header (profile, vJoy status, Activate), four tabs (Fly, Feel, Keys, HUD),
-// a status bar, and the compact window. All built in code; there is no designer.
+// The screens: a fixed header (profile, vJoy status, settings menu, Activate), four tabs (Fly, Stick,
+// Keys, HUD), a status bar, and the compact window. All built in code; there is no designer.
 public partial class MainForm
 {
 	private sealed class HotkeyRow
@@ -81,6 +82,8 @@ public partial class MainForm
 
 	private Button moreButton;
 
+	private Button settingsButton;
+
 	private StatusChip vjoyChip;
 
 	private ActivateButton btnToggle;
@@ -133,11 +136,13 @@ public partial class MainForm
 
 	private Slider tbTrimRate;
 
-	private CheckBox cbInvertRoll;
+	private ToggleSwitch swInvertRoll;
 
-	private CheckBox cbInvertPitch;
+	private ToggleSwitch swInvertPitch;
 
-	private Segmented segKeys;
+	private Label lblModeTuning;
+
+	private readonly TabButton[] keyTabs = new TabButton[2];
 
 	private Control keysCommands;
 
@@ -146,6 +151,8 @@ public partial class MainForm
 	private ToggleSwitch swRudder;
 
 	private Slider tbRudderRate;
+
+	private LinkLabel lnkRudderOff;
 
 	private readonly List<HotkeyRow> hotkeyRows = new List<HotkeyRow>();
 
@@ -194,10 +201,6 @@ public partial class MainForm
 	private ToggleSwitch swHudStandby;
 
 	private Button btnPositionHud;
-
-	private ToggleSwitch swTopMost;
-
-	private ToggleSwitch swTray;
 
 	private Control compactPanel;
 
@@ -250,7 +253,7 @@ public partial class MainForm
 		};
 		root.Controls.Add(pageHost, 0, 3);
 		pages[0] = BuildFlyPage();
-		pages[1] = BuildFeelPage();
+		pages[1] = BuildStickPage();
 		pages[2] = BuildKeysPage();
 		pages[3] = BuildHudPage();
 		foreach (Control p in pages)
@@ -349,7 +352,8 @@ public partial class MainForm
 			Text = text.ToUpperInvariant(),
 			Font = Theme.Header,
 			ForeColor = Theme.Muted,
-			AutoSize = true
+			AutoSize = true,
+			UseMnemonic = false
 		};
 	}
 
@@ -365,7 +369,6 @@ public partial class MainForm
 			ColumnCount = 2,
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Margin = Padding.Empty,
 			ColumnStyles =
 			{
 				new ColumnStyle(SizeType.Percent, 100f),
@@ -380,6 +383,18 @@ public partial class MainForm
 		t.Controls.Add(l, 0, 0);
 		t.Controls.Add(right, 1, 0);
 		return t;
+	}
+
+	// Goes on the right of a page's first header, so it's clear which settings follow the profile.
+	private static Label ScopeTag(bool perProfile)
+	{
+		return new Label
+		{
+			Text = (perProfile ? "per profile" : "all profiles"),
+			AutoSize = true,
+			Font = Theme.Small,
+			ForeColor = Theme.Faint
+		};
 	}
 
 	// One line: caption (with an optional hint), slider, value with unit. The row matches its parent's color.
@@ -580,20 +595,33 @@ public partial class MainForm
 		{
 			MessageBox.Show(this, vjoyDetails, "vJoy status", MessageBoxButtons.OK, (vjoyChip.Kind == ChipKind.Ok) ? MessageBoxIcon.Asterisk : MessageBoxIcon.Exclamation);
 		};
-		Button aboutButton = Styled("ⓘ", Theme.Input);
-		aboutButton.Font = new Font("Segoe UI", 11f);
-		aboutButton.Dock = DockStyle.Fill;
-		aboutButton.Margin = new Padding(6, 0, 0, 0);
-		aboutButton.AccessibleName = "About MouseYokeEnhanced";
-		toolTip.SetToolTip(aboutButton, "About MouseYokeEnhanced");
-		aboutButton.Click += (object? s, EventArgs e) =>
+		settingsButton = Styled("", Theme.Input);
+		// Drawn as a path centered on its ink: as button text, the glyph sits low and left at this size.
+		settingsButton.Paint += (object? s, PaintEventArgs e) =>
 		{
-			ShowAbout();
+			using GraphicsPath gear = new GraphicsPath();
+			using FontFamily symbol = new FontFamily("Segoe UI Symbol");
+			gear.AddString("⚙", symbol, 0, 21f, Point.Empty, StringFormat.GenericTypographic);
+			RectangleF b = gear.GetBounds();
+			using Matrix m = new Matrix();
+			m.Translate(((float)settingsButton.Width - b.Width) / 2f - b.X, ((float)settingsButton.Height - b.Height) / 2f - b.Y);
+			gear.Transform(m);
+			e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+			using SolidBrush brush = new SolidBrush(settingsButton.ForeColor);
+			e.Graphics.FillPath(brush, gear);
+		};
+		settingsButton.Dock = DockStyle.Fill;
+		settingsButton.Margin = new Padding(6, 0, 0, 0);
+		settingsButton.AccessibleName = "Settings";
+		toolTip.SetToolTip(settingsButton, "Window options and About");
+		settingsButton.Click += (object? s, EventArgs e) =>
+		{
+			ShowSettingsMenu();
 		};
 		bar.Controls.Add(profileButton, 0, 0);
 		bar.Controls.Add(moreButton, 1, 0);
 		bar.Controls.Add(vjoyChip, 2, 0);
-		bar.Controls.Add(aboutButton, 3, 0);
+		bar.Controls.Add(settingsButton, 3, 0);
 		return bar;
 	}
 
@@ -642,7 +670,7 @@ public partial class MainForm
 			using Pen pen = new Pen(Theme.Line);
 			e.Graphics.DrawLine(pen, 0, bar.Height - 1, bar.Width, bar.Height - 1);
 		};
-		string[] names = new string[4] { "Fly", "Feel", "Keys", "HUD" };
+		string[] names = new string[4] { "Fly", "Stick", "Keys", "HUD" };
 		for (int i = 0; i < 4; i++)
 		{
 			int index = i;
@@ -712,11 +740,13 @@ public partial class MainForm
 
 	// ---------- profile menus ----------
 
-	// The two profile menus are kept and refilled on every open: an item's Click can open a modal
-	// dialog (Rename, Import...), so the menu must still exist when the handler returns.
+	// The header menus are kept and refilled on every open: an item's Click can open a modal
+	// dialog (Rename, Import, About...), so the menu must still exist when the handler returns.
 	private ContextMenuStrip profileMenu;
 
 	private ContextMenuStrip moreMenu;
+
+	private ContextMenuStrip settingsMenu;
 
 	private static ContextMenuStrip Refill(ref ContextMenuStrip menu)
 	{
@@ -794,6 +824,44 @@ public partial class MainForm
 		});
 		del.Tag = "danger";
 		ShowMenu(m, moreButton);
+	}
+
+	// Window options are app-wide, so they live here and not on a page with per-profile settings.
+	private void ShowSettingsMenu()
+	{
+		ContextMenuStrip m = Refill(ref settingsMenu);
+		m.ShowItemToolTips = true;
+		ToolStripMenuItem top = new ToolStripMenuItem("Always on top", null, (object? s, EventArgs e) =>
+		{
+			settings.TopMost = !settings.TopMost;
+			TopMost = settings.TopMost;
+			SaveSettingsSoon();
+		})
+		{
+			Checked = settings.TopMost
+		};
+		ToolStripMenuItem toTray = new ToolStripMenuItem("Close to tray", null, (object? s, EventArgs e) =>
+		{
+			settings.CloseToTray = !settings.CloseToTray;
+			tray.Visible = settings.CloseToTray;
+			SaveSettingsSoon();
+		})
+		{
+			Checked = settings.CloseToTray,
+			ToolTipText = "Closing the window keeps the app in the tray; keys keep working"
+		};
+		m.Items.Add(top);
+		m.Items.Add(toTray);
+		m.Items.Add("Compact window", null, (object? s, EventArgs e) =>
+		{
+			SetCompact(on: true);
+		}).ToolTipText = "Just the essentials, for a second screen";
+		m.Items.Add(new ToolStripSeparator());
+		m.Items.Add("About MouseYokeEnhanced…", null, (object? s, EventArgs e) =>
+		{
+			ShowAbout();
+		});
+		m.Show(settingsButton, new Point(settingsButton.Width, settingsButton.Height + 2), ToolStripDropDownDirection.BelowLeft);
 	}
 
 	private void RefreshProfileUi()
@@ -1015,7 +1083,7 @@ public partial class MainForm
 		toolTip.SetToolTip(copy, "Copy the version and setup, to paste into a bug report");
 		copy.Click += (object? s, EventArgs e) =>
 		{
-			string info = "MouseYokeEnhanced " + (version ?? "dev build") + "\r\n" + vjoyChip.Text + "\r\nWindows " + Environment.OSVersion.Version + "\r\n.NET " + Environment.Version;
+			string info = "MouseYokeEnhanced " + (version ?? "dev build") + "\r\n" + vjoyDetails.Replace("\n", "\r\n") + "\r\nWindows " + Environment.OSVersion.Version + "\r\n.NET " + Environment.Version;
 			try
 			{
 				Clipboard.SetText(info);
@@ -1113,7 +1181,7 @@ public partial class MainForm
 		};
 		AddRow(card, ref cr, lamps, SizeType.AutoSize, 0, fill: true, 0);
 		AddRow(t, ref row, card, SizeType.AutoSize, 0);
-		swHideCursor = Switch("Hide cursor", "while flying", (object? s, EventArgs e) =>
+		swHideCursor = Switch("Hide cursor", "while flying · per profile", (object? s, EventArgs e) =>
 		{
 			SaveActiveProfile();
 			if (active)
@@ -1128,7 +1196,7 @@ public partial class MainForm
 				}
 			}
 		});
-		swShowHudFly = Switch("Show HUD", "while flying", (object? s, EventArgs e) =>
+		swShowHudFly = Switch("Show HUD", "while flying · all profiles", (object? s, EventArgs e) =>
 		{
 			SetShowHud(swShowHudFly.Checked);
 		});
@@ -1184,14 +1252,15 @@ public partial class MainForm
 		return v;
 	}
 
-	// ---------- Feel ----------
+	// ---------- Stick ----------
 
-	private Control BuildFeelPage()
+	private Control BuildStickPage()
 	{
 		TableLayoutPanel t = NewColumn();
 		int row = 0;
 		TableLayoutPanel modeCard = Card();
 		int mr = 0;
+		AddRow(modeCard, ref mr, Header("Stick mode", ScopeTag(perProfile: true)), SizeType.AutoSize, 0, fill: true, 6);
 		segMode = new Segmented
 		{
 			Items = new string[2] { "Direct", "Spring" },
@@ -1216,34 +1285,48 @@ public partial class MainForm
 			MaximumSize = new Size(430, 0),
 			ForeColor = Theme.Muted,
 			Font = Theme.Small,
-			Margin = Padding.Empty
+			Margin = new Padding(0, 0, 0, 6)
 		};
-		AddRow(modeCard, ref mr, lblModeHelp, SizeType.AutoSize, 0, fill: false, 0);
-		AddRow(t, ref row, modeCard, SizeType.AutoSize, 0);
+		AddRow(modeCard, ref mr, lblModeHelp, SizeType.AutoSize, 0, fill: false);
 		swHoldPosition = Switch("Hold stick position", "when you start or stop flying, no jump", (object? s, EventArgs e) =>
 		{
 			SaveActiveProfile();
 		});
-		swHoldPosition.Margin = new Padding(0, 0, 0, 8);
-		AddRow(t, ref row, swHoldPosition, SizeType.AutoSize, 0);
-		TableLayoutPanel curveCard = Card(6);
-		int cr = 0;
+		AddRow(modeCard, ref mr, swHoldPosition, SizeType.AutoSize, 0, fill: true, 0);
+		AddRow(t, ref row, modeCard, SizeType.AutoSize, 0);
+		TableLayoutPanel response = Card();
+		int rr = 0;
 		curve = new CurveView
 		{
 			Height = 90,
-			BackColor = Theme.Row
+			BackColor = Theme.Row,
+			Margin = new Padding(0, 0, 0, 8)
 		};
-		AddRow(curveCard, ref cr, curve, SizeType.AutoSize, 0, fill: true, 0);
-		AddRow(t, ref row, curveCard, SizeType.AutoSize, 0);
-		TableLayoutPanel stick = Card();
-		int sr = 0;
-		AddRow(stick, ref sr, Header("Stick"), SizeType.AutoSize, 0, fill: false, 6);
-		tbRollSens = AddSliderRow(stick, ref sr, "Roll sensitivity", null, 1, 100, 55, "");
-		tbPitchSens = AddSliderRow(stick, ref sr, "Pitch sensitivity", null, 1, 100, 45, "");
-		tbExpo = AddSliderRow(stick, ref sr, "Expo", null, 0, 90, 40, "%");
-		tbDeadzone = AddSliderRow(stick, ref sr, "Deadzone", "Direct only", 0, 30, 4, "%");
-		tbSmooth = AddSliderRow(stick, ref sr, "Smoothing", "Direct only", 0, 80, 15, "%");
-		tbCenterSpeed = AddSliderRow(stick, ref sr, "Auto-center", "Spring only", 10, 300, 120, " %/s");
+		AddRow(response, ref rr, curve, SizeType.AutoSize, 0, fill: true);
+		tbRollSens = AddSliderRow(response, ref rr, "Roll sensitivity", null, 1, 100, 55, "");
+		tbPitchSens = AddSliderRow(response, ref rr, "Pitch sensitivity", null, 1, 100, 45, "");
+		tbExpo = AddSliderRow(response, ref rr, "Expo", "softer near center", 0, 90, 40, "%");
+		swInvertRoll = Switch("Invert roll", null, (object? s, EventArgs e) =>
+		{
+			SaveActiveProfile();
+		});
+		swInvertPitch = Switch("Invert pitch", null, (object? s, EventArgs e) =>
+		{
+			SaveActiveProfile();
+		});
+		TableLayoutPanel inverts = SwitchPair(swInvertRoll, swInvertPitch);
+		inverts.Margin = new Padding(0, 2, 0, 0);
+		AddRow(response, ref rr, inverts, SizeType.AutoSize, 0, fill: true, 0);
+		AddRow(t, ref row, response, SizeType.AutoSize, 0);
+		// Only the sliders of the active mode are shown (UpdateModeUi), under a header naming it.
+		TableLayoutPanel tuning = Card();
+		int tr = 0;
+		lblModeTuning = HeaderLabel("Direct mode");
+		AddRow(tuning, ref tr, lblModeTuning, SizeType.AutoSize, 0, fill: false, 6);
+		tbDeadzone = AddSliderRow(tuning, ref tr, "Deadzone", "around center", 0, 30, 4, "%");
+		tbSmooth = AddSliderRow(tuning, ref tr, "Smoothing", "less jitter", 0, 80, 15, "%");
+		tbCenterSpeed = AddSliderRow(tuning, ref tr, "Auto-center", "spring-back speed", 10, 300, 120, " %/s");
+		AddRow(t, ref row, tuning, SizeType.AutoSize, 0);
 		tbExpo.ValueChanged += (object? s, EventArgs e) =>
 		{
 			UpdateCurve();
@@ -1252,53 +1335,45 @@ public partial class MainForm
 		{
 			UpdateCurve();
 		};
-		Control trimHeader = Header("Trim");
-		trimHeader.Margin = new Padding(0, 6, 0, 6);
-		AddRow(stick, ref sr, trimHeader, SizeType.AutoSize, 0, fill: false);
-		tbTrimRate = AddSliderRow(stick, ref sr, "Trim rate", "while a key is held", 1, 100, 25, " %/s");
-		FlowLayoutPanel checks = new FlowLayoutPanel
+		TableLayoutPanel trimRudder = Card();
+		int qr = 0;
+		AddRow(trimRudder, ref qr, Header("Trim & rudder"), SizeType.AutoSize, 0, fill: false, 6);
+		tbTrimRate = AddSliderRow(trimRudder, ref qr, "Trim rate", "while a key is held", 1, 100, 25, " %/s");
+		swRudder = Switch("Keyboard rudder", "drives the vJoy Z axis", (object? s, EventArgs e) =>
 		{
-			AutoSize = true,
-			WrapContents = true,
-			BackColor = Theme.Row,
-			Margin = new Padding(0, 4, 0, 0)
-		};
-		cbInvertRoll = new CheckBox
-		{
-			Text = "Invert roll",
-			ForeColor = Theme.Text,
-			AutoSize = true,
-			Margin = new Padding(0, 2, 16, 2)
-		};
-		cbInvertPitch = new CheckBox
-		{
-			Text = "Invert pitch",
-			ForeColor = Theme.Text,
-			AutoSize = true,
-			Margin = new Padding(0, 2, 16, 2)
-		};
-		cbInvertRoll.CheckedChanged += (object? s, EventArgs e) =>
-		{
-			SaveActiveProfile();
-		};
-		cbInvertPitch.CheckedChanged += (object? s, EventArgs e) =>
-		{
-			SaveActiveProfile();
-		};
-		checks.Controls.Add(cbInvertRoll);
-		checks.Controls.Add(cbInvertPitch);
-		AddRow(stick, ref sr, checks, SizeType.AutoSize, 0, fill: true, 0);
-		AddRow(t, ref row, stick, SizeType.AutoSize, 0);
+			if (!loading)
+			{
+				profile.RudderEnabled = swRudder.Checked;
+				if (!swRudder.Checked)
+				{
+					// Otherwise Z would stay wherever the rudder was when it was switched off.
+					profile.RudderValue = 0.0;
+					profile.RudderLeftHeld = (profile.RudderRightHeld = false);
+					if (acquired)
+					{
+						VJoy.SetAxis(16384, 1u, 50u);
+					}
+				}
+				SaveActiveProfile();
+			}
+			RefreshHotkeyUi();
+		});
+		swRudder.Margin = new Padding(0, 4, 0, 6);
+		AddRow(trimRudder, ref qr, swRudder, SizeType.AutoSize, 0);
+		tbRudderRate = AddSliderRow(trimRudder, ref qr, "Rudder rate", "ramp and return", 10, 200, 60, " %/s");
+		AddRow(t, ref row, trimRudder, SizeType.AutoSize, 0);
 		return Scroller(t);
 	}
 
-	// Deadzone and Smoothing do nothing in spring mode and Auto-center does nothing in direct mode.
+	// Deadzone and Smoothing do nothing in spring mode and Auto-center does nothing in direct mode,
+	// so only the active mode's sliders are shown.
 	private void UpdateModeUi()
 	{
 		bool spring = SpringMode;
-		SetRowEnabled(tbDeadzone, !spring);
-		SetRowEnabled(tbSmooth, !spring);
-		SetRowEnabled(tbCenterSpeed, spring);
+		tbDeadzone.Parent.Visible = !spring;
+		tbSmooth.Parent.Visible = !spring;
+		tbCenterSpeed.Parent.Visible = spring;
+		lblModeTuning.Text = (spring ? "SPRING MODE" : "DIRECT MODE");
 		lblModeHelp.Text = (spring ? "Nudge the mouse and the stick springs back to center, like a sidestick. Try Hide cursor with it." : "The mouse position is the stick position. Bring it back to center yourself.");
 		lblFlyMode.Text = (spring ? "SPRING" : "DIRECT");
 		UpdateCurve();
@@ -1316,18 +1391,44 @@ public partial class MainForm
 		TableLayoutPanel t = NewColumn();
 		t.AutoScroll = false;
 		int row = 0;
-		segKeys = new Segmented
+		// Sub-tabs, drawn like the page tabs so they read as navigation and not as a setting.
+		TableLayoutPanel bar = new TableLayoutPanel
 		{
-			Items = new string[2] { "Commands", "vJoy buttons" },
-			Text = "Key lists",
-			AccessibleName = "Key lists"
+			ColumnCount = 3,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Margin = new Padding(0, 0, 0, 8),
+			ColumnStyles =
+			{
+				new ColumnStyle(SizeType.AutoSize),
+				new ColumnStyle(SizeType.AutoSize),
+				new ColumnStyle(SizeType.Percent, 100f)
+			}
 		};
-		segKeys.SelectedIndexChanged += (object? s, EventArgs e) =>
+		bar.Paint += (object? s, PaintEventArgs e) =>
 		{
-			keysCommands.Visible = segKeys.SelectedIndex == 0;
-			keysButtons.Visible = segKeys.SelectedIndex == 1;
+			using Pen pen = new Pen(Theme.Line);
+			e.Graphics.DrawLine(pen, 0, bar.Height - 1, bar.Width, bar.Height - 1);
 		};
-		AddRow(t, ref row, segKeys, SizeType.AutoSize, 0);
+		string[] names = new string[2] { "Commands", "vJoy buttons" };
+		int[] widths = new int[2] { 100, 140 };
+		for (int i = 0; i < 2; i++)
+		{
+			int index = i;
+			keyTabs[i] = new TabButton
+			{
+				Text = names[i],
+				Font = Theme.Body,
+				Size = new Size(widths[i], 30),
+				Margin = new Padding(0, 0, 6, 0)
+			};
+			keyTabs[i].Click += (object? s, EventArgs e) =>
+			{
+				SelectKeyList(index);
+			};
+			bar.Controls.Add(keyTabs[i], i, 0);
+		}
+		AddRow(t, ref row, bar, SizeType.AutoSize, 0);
 		Panel host = new Panel
 		{
 			BackColor = Theme.Bg,
@@ -1335,11 +1436,21 @@ public partial class MainForm
 		};
 		keysCommands = BuildCommandsList();
 		keysButtons = BuildButtonsList();
-		keysButtons.Visible = false;
 		host.Controls.Add(keysCommands);
 		host.Controls.Add(keysButtons);
 		AddRow(t, ref row, host, SizeType.Percent, 100, fill: true, 0);
+		SelectKeyList(0);
 		return t;
+	}
+
+	private void SelectKeyList(int index)
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			keyTabs[i].Selected = i == index;
+		}
+		keysCommands.Visible = index == 0;
+		keysButtons.Visible = index == 1;
 	}
 
 	private Control BuildCommandsList()
@@ -1348,42 +1459,47 @@ public partial class MainForm
 		t.Padding = Padding.Empty;
 		int row = 0;
 		string group = null;
+		TableLayoutPanel card = null;
+		int cr = 0;
 		foreach (Hotkey hk in Hotkey.All)
 		{
 			if (hk.Group != group)
 			{
-				group = hk.Group;
-				Control h = Header(group);
-				h.Margin = new Padding(0, (row == 0) ? 2 : 6, 0, 4);
-				AddRow(t, ref row, h, SizeType.AutoSize, 0, fill: false);
-				if (hk.IsRudder)
+				if (card != null)
 				{
-					swRudder = Switch("Keyboard rudder", "drives the vJoy Z axis", (object? s, EventArgs e) =>
-					{
-						if (!loading)
-						{
-							profile.RudderEnabled = swRudder.Checked;
-							if (!swRudder.Checked)
-							{
-								// Otherwise Z would stay wherever the rudder was when it was switched off.
-								profile.RudderValue = 0.0;
-								profile.RudderLeftHeld = (profile.RudderRightHeld = false);
-								if (acquired)
-								{
-									VJoy.SetAxis(16384, 1u, 50u);
-								}
-							}
-							SaveActiveProfile();
-						}
-						RefreshHotkeyUi();
-					});
-					swRudder.Margin = new Padding(0, 0, 0, 3);
-					AddRow(t, ref row, swRudder, SizeType.AutoSize, 0, fill: true, 3);
+					AddRow(t, ref row, card, SizeType.AutoSize, 0);
 				}
+				group = hk.Group;
+				card = Card(8);
+				cr = 0;
+				Control right = null;
+				if (row == 0)
+				{
+					right = ScopeTag(perProfile: true);
+				}
+				else if (hk.IsRudder)
+				{
+					lnkRudderOff = new LinkLabel
+					{
+						Text = "keyboard rudder is off · turn on in Stick",
+						AutoSize = true,
+						Font = Theme.Small,
+						LinkColor = Theme.Muted,
+						ActiveLinkColor = Color.White,
+						VisitedLinkColor = Theme.Muted,
+						LinkBehavior = LinkBehavior.HoverUnderline
+					};
+					lnkRudderOff.LinkClicked += (object? s, LinkLabelLinkClickedEventArgs e) =>
+					{
+						SelectTab(1);
+					};
+					right = lnkRudderOff;
+				}
+				AddRow(card, ref cr, Header(group, right), SizeType.AutoSize, 0, right != null, 6);
 			}
-			AddRow(t, ref row, BuildHotkeyRow(hk), SizeType.AutoSize, 0, fill: true, 3);
+			AddRow(card, ref cr, BuildHotkeyRow(hk), SizeType.AutoSize, 0, fill: true, 3);
 		}
-		tbRudderRate = AddSliderRow(t, ref row, "Ramp / return", "rudder speed", 10, 200, 60, " %/s");
+		AddRow(t, ref row, card, SizeType.AutoSize, 0, fill: true, 0);
 		TableLayoutPanel outer = NewColumn();
 		outer.AutoScroll = false;
 		outer.Padding = Padding.Empty;
@@ -1394,7 +1510,7 @@ public partial class MainForm
 			ColumnCount = 2,
 			AutoSize = true,
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Margin = new Padding(0, 4, 0, 0),
+			Margin = new Padding(0, 6, 0, 0),
 			ColumnStyles =
 			{
 				new ColumnStyle(SizeType.Percent, 100f),
@@ -1444,7 +1560,7 @@ public partial class MainForm
 			AutoSizeMode = AutoSizeMode.GrowAndShrink,
 			Dock = DockStyle.Fill,
 			Margin = Padding.Empty,
-			Padding = new Padding(10, 1, 2, 1),
+			Padding = new Padding(2, 1, 0, 1),
 			ColumnStyles =
 			{
 				new ColumnStyle(SizeType.Percent, 100f),
@@ -1473,9 +1589,9 @@ public partial class MainForm
 		};
 		line.Controls.Add(r.Key, 1, 0);
 		r.Clear = Styled("×", Theme.Row);
-		r.Clear.ForeColor = Theme.Muted;
+		r.Clear.ForeColor = Theme.Text;
 		r.Clear.Font = new Font("Segoe UI", 11f);
-		r.Clear.Width = 26;
+		r.Clear.Width = 28;
 		r.Clear.Height = 24;
 		r.Clear.Margin = new Padding(2, 1, 2, 1);
 		r.Clear.AccessibleName = "Remove the key for " + hk.Label;
@@ -1487,8 +1603,9 @@ public partial class MainForm
 		};
 		line.Controls.Add(r.Clear, 2, 0);
 		Button reset = Styled("↺", Theme.Row);
-		reset.ForeColor = Theme.Muted;
-		reset.Width = 26;
+		reset.ForeColor = Theme.Text;
+		reset.Font = new Font("Segoe UI", 11f);
+		reset.Width = 28;
 		reset.Height = 24;
 		reset.Margin = new Padding(2, 1, 2, 1);
 		reset.AccessibleName = "Reset " + hk.Label + " to default";
@@ -1760,6 +1877,7 @@ public partial class MainForm
 		}
 		legend.SetLines(lines);
 		SetRowEnabled(tbRudderRate, profile.RudderEnabled);
+		lnkRudderOff.Visible = !profile.RudderEnabled;
 	}
 
 	private static void AddLegend(List<List<(string, bool)>> lines, string label, params int[] vks)
@@ -1806,25 +1924,41 @@ public partial class MainForm
 				new ColumnStyle(SizeType.AutoSize)
 			}
 		};
-		top.Controls.Add(new Label
+		TableLayoutPanel info = new TableLayoutPanel
 		{
-			Text = "Map a key to a vJoy button, then bind that button in the sim (gear, flaps, brakes, autopilot…). Saved with this profile.",
+			ColumnCount = 1,
+			AutoSize = true,
+			AutoSizeMode = AutoSizeMode.GrowAndShrink,
+			Anchor = AnchorStyles.Left,
+			Margin = new Padding(0, 0, 8, 0)
+		};
+		lblBindCount = new Label
+		{
+			AutoSize = true,
+			Font = Theme.Strong,
+			ForeColor = Theme.Text,
+			Margin = new Padding(0, 0, 0, 3)
+		};
+		info.Controls.Add(lblBindCount, 0, 0);
+		info.Controls.Add(new Label
+		{
+			Text = "Map a key to a vJoy button, then bind that button in the sim (gear, flaps, brakes, autopilot…). The lamp lights while the key is down. Saved with this profile.",
 			ForeColor = Theme.Muted,
 			Font = Theme.Small,
 			AutoSize = true,
 			MaximumSize = new Size(330, 0),
-			Anchor = AnchorStyles.Left,
-			Margin = new Padding(0, 0, 8, 0)
-		}, 0, 0);
+			Margin = Padding.Empty
+		}, 0, 1);
+		top.Controls.Add(info, 0, 0);
 		Button add = ActionButton("+  Add key", Theme.Blue);
 		add.Margin = Padding.Empty;
-		add.Anchor = AnchorStyles.Right;
+		add.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 		add.Click += (object? s, EventArgs e) =>
 		{
 			BeginAddBinding();
 		};
 		top.Controls.Add(add, 1, 0);
-		AddRow(t, ref row, top, SizeType.AutoSize, 0, fill: true, 6);
+		AddRow(t, ref row, top, SizeType.AutoSize, 0, fill: true, 8);
 		lblBindStatus = new Label
 		{
 			AutoSize = true,
@@ -1843,14 +1977,7 @@ public partial class MainForm
 		{
 			FitBindRows();
 		};
-		AddRow(t, ref row, bindPanel, SizeType.Percent, 100, fill: true, 6);
-		lblBindCount = new Label
-		{
-			AutoSize = true,
-			ForeColor = Theme.Muted,
-			Font = Theme.Small
-		};
-		AddRow(t, ref row, lblBindCount, SizeType.AutoSize, 0, fill: false, 0);
+		AddRow(t, ref row, bindPanel, SizeType.Percent, 100, fill: true, 0);
 		return t;
 	}
 
@@ -1921,8 +2048,8 @@ public partial class MainForm
 		FitBindRows();
 		bindPanel.ResumeLayout();
 		UpdateBindWarnings();
-		lblBindCount.Text = profile.Buttons.Count + " of " + vjoyButtonCount + " buttons used. The lamp lights while the key is down.";
-		segKeys.SetItem(1, "vJoy buttons · " + profile.Buttons.Count);
+		lblBindCount.Text = profile.Buttons.Count + " of " + vjoyButtonCount + " vJoy buttons used";
+		keyTabs[1].Text = "vJoy buttons · " + profile.Buttons.Count;
 	}
 
 	private Control BuildBindRow(ButtonBinding b)
@@ -2025,7 +2152,7 @@ public partial class MainForm
 		nameBox.Controls.Add(name);
 		rowP.Controls.Add(nameBox, 4, 0);
 		Button del = Styled("×", Theme.Row);
-		del.ForeColor = Theme.Muted;
+		del.ForeColor = Theme.Text;
 		del.Font = new Font("Segoe UI", 11f);
 		del.Size = new Size(26, 26);
 		del.Margin = new Padding(2);
@@ -2079,7 +2206,7 @@ public partial class MainForm
 		AddRow(t, ref row, hudPreview, SizeType.AutoSize, 0);
 		TableLayoutPanel card = Card();
 		int cr = 0;
-		AddRow(card, ref cr, Header("Style"), SizeType.AutoSize, 0, fill: false, 6);
+		AddRow(card, ref cr, Header("Style", ScopeTag(perProfile: false)), SizeType.AutoSize, 0, fill: true, 6);
 		segStyle = new Segmented
 		{
 			Items = new string[4] { "Sidestick", "Minimal", "Strip", "Classic" },
@@ -2132,6 +2259,9 @@ public partial class MainForm
 			settings.HudRollTrim = (HudElementMode)segHudRollTrim.SelectedIndex;
 		});
 		AddRow(t, ref row, elements, SizeType.AutoSize, 0);
+		TableLayoutPanel display = Card();
+		int dr = 0;
+		AddRow(display, ref dr, Header("Display"), SizeType.AutoSize, 0, fill: false, 6);
 		swShowHud = Switch("Show HUD", "while flying", (object? s, EventArgs e) =>
 		{
 			SetShowHud(swShowHud.Checked);
@@ -2155,10 +2285,12 @@ public partial class MainForm
 			UpdateOverlayVisibility();
 			SaveSettingsSoon();
 		});
-		TableLayoutPanel pair1 = SwitchPair(swShowHud, swHudNumbers);
-		pair1.Margin = new Padding(0, 0, 0, 6);
-		AddRow(t, ref row, pair1, SizeType.AutoSize, 0);
-		AddRow(t, ref row, SwitchPair(swHudFade, swHudStandby), SizeType.AutoSize, 0);
+		AddRow(display, ref dr, SwitchPair(swShowHud, swHudNumbers), SizeType.AutoSize, 0, fill: true, 4);
+		AddRow(display, ref dr, SwitchPair(swHudFade, swHudStandby), SizeType.AutoSize, 0, fill: true, 0);
+		AddRow(t, ref row, display, SizeType.AutoSize, 0);
+		TableLayoutPanel position = Card();
+		int pr = 0;
+		AddRow(position, ref pr, Header("Position"), SizeType.AutoSize, 0, fill: false, 6);
 		FlowLayoutPanel buttons = new FlowLayoutPanel
 		{
 			AutoSize = true,
@@ -2187,50 +2319,8 @@ public partial class MainForm
 		};
 		buttons.Controls.Add(btnPositionHud);
 		buttons.Controls.Add(resetPos);
-		AddRow(t, ref row, buttons, SizeType.AutoSize, 0, fill: true, 10);
-		AddRow(t, ref row, Header("Window"), SizeType.AutoSize, 0, fill: false, 6);
-		swTopMost = Switch("Always on top", null, (object? s, EventArgs e) =>
-		{
-			settings.TopMost = swTopMost.Checked;
-			TopMost = swTopMost.Checked;
-			SaveSettingsSoon();
-		});
-		swTray = Switch("Close to tray", "keys keep working", (object? s, EventArgs e) =>
-		{
-			settings.CloseToTray = swTray.Checked;
-			tray.Visible = swTray.Checked;
-			SaveSettingsSoon();
-		});
-		swTopMost.Height = 40;
-		AddRow(t, ref row, SwitchPair(swTopMost, swTray), SizeType.AutoSize, 0, fill: true, 6);
-		TableLayoutPanel compactRow = new TableLayoutPanel
-		{
-			ColumnCount = 2,
-			AutoSize = true,
-			AutoSizeMode = AutoSizeMode.GrowAndShrink,
-			Margin = Padding.Empty,
-			ColumnStyles =
-			{
-				new ColumnStyle(SizeType.AutoSize),
-				new ColumnStyle(SizeType.Percent, 100f)
-			}
-		};
-		Button toCompact = ActionButton("Compact window", Theme.Primary);
-		toCompact.Click += (object? s, EventArgs e) =>
-		{
-			SetCompact(on: true);
-		};
-		compactRow.Controls.Add(toCompact, 0, 0);
-		compactRow.Controls.Add(new Label
-		{
-			Text = "Just the essentials, for a second screen.",
-			ForeColor = Theme.Muted,
-			Font = Theme.Small,
-			AutoSize = true,
-			Anchor = AnchorStyles.Left,
-			Margin = new Padding(4, 0, 0, 0)
-		}, 1, 0);
-		AddRow(t, ref row, compactRow, SizeType.AutoSize, 0, fill: true, 0);
+		AddRow(position, ref pr, buttons, SizeType.AutoSize, 0, fill: true, 0);
+		AddRow(t, ref row, position, SizeType.AutoSize, 0, fill: true, 0);
 		return Scroller(t);
 	}
 
@@ -2341,8 +2431,6 @@ public partial class MainForm
 		segHudPitchTrim.SelectedIndex = (int)settings.HudPitchTrim;
 		segHudRollTrim.SelectedIndex = (int)settings.HudRollTrim;
 		RefreshHudElementHints();
-		swTopMost.Checked = settings.TopMost;
-		swTray.Checked = settings.CloseToTray;
 		TopMost = settings.TopMost;
 		tray.Visible = settings.CloseToTray;
 		ConfigurePreview();
@@ -2363,8 +2451,8 @@ public partial class MainForm
 		tbSmooth.Value = profile.Smoothing;
 		tbCenterSpeed.Value = profile.CenterSpeed;
 		tbTrimRate.Value = profile.TrimRate;
-		cbInvertPitch.Checked = profile.InvertPitch;
-		cbInvertRoll.Checked = profile.InvertRoll;
+		swInvertPitch.Checked = profile.InvertPitch;
+		swInvertRoll.Checked = profile.InvertRoll;
 		swHideCursor.Checked = profile.HideCursor;
 		segMode.SelectedIndex = (profile.SelfCenter ? 1 : 0);
 		swHoldPosition.Checked = profile.HoldPosition;

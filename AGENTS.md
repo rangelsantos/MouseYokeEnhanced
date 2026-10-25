@@ -44,7 +44,8 @@ dotnet build MouseYokeEnhanced\MouseYokeVJoy.csproj -c Release
   Any warning or error of **another kind** is ours.
 
 There are no tests. To check UI changes, build, launch the exe, open a tab by invoking its button
-through UI Automation (`System.Windows.Automation`, `InvokePattern` on "Fly", "Feel", "Keys", "HUD"),
+through UI Automation (`System.Windows.Automation`, `InvokePattern` on "Fly", "Stick", "Keys", "HUD"; the Keys
+sub-tabs "Commands" and "vJoy buttons · n" are `TabButton`s too; "Settings" opens the ⚙ menu),
 screenshot the window with `Graphics.CopyFromScreen`, then `CloseMainWindow()`. Owner-drawn controls
 (`Segmented`, `StickMonitor`...) are found by their `Text`, which mirrors the accessible name; click a
 segment with `PostMessage(WM_LBUTTONDOWN/UP)` on its handle so the real mouse doesn't move. To try a
@@ -58,7 +59,7 @@ confines it to the primary monitor.
 | File | Role |
 |---|---|
 | `MainForm.cs` | Logic: control loop, Raw Input, vJoy setup and checks, key handling, profile actions, HUD visibility |
-| `MainForm.Ui.cs` | The screens, built in code (no designer): header, tabs Fly/Feel/Keys/HUD, status bar, compact window, tray, hotkey and button lists, About dialog (ⓘ in the header: version, credits, links) |
+| `MainForm.Ui.cs` | The screens, built in code (no designer): header, tabs Fly/Stick/Keys/HUD, status bar, compact window, tray, hotkey and button lists, ⚙ menu (window options) and About dialog (version, credits, links) |
 | `DarkControls.cs` | Owner-drawn controls: `Slider`, `ToggleSwitch`, `Segmented`, `TabButton`, `ActivateButton`, `StickMonitor`, `CurveView`, `LampStrip`, `KeyLegend`, `Stepper`, `HudPreview`, dark menus |
 | `HudRenderer.cs` | Draws the four HUD styles (`HudStyle`) from a `HudState`; shared by the overlay, the Fly monitor and the HUD preview |
 | `OverlayForm.cs` | Click-through HUD: per-pixel-alpha layered window (`UpdateLayeredWindow`), never activates; position mode with Done; notices |
@@ -123,6 +124,12 @@ confines it to the primary monitor.
   `SwitchPair()`, `Header()`, `Styled()`/`ActionButton()`. A page column goes through `Scroller()`:
   AutoScroll on a TableLayoutPanel with Percent rows doesn't show a scrollbar reliably, and without it
   the last AutoSize row stretches to the bottom.
+- Page layout rules (the UI was reorganized around them): every group is a `Card()` with its
+  `Header()` inside; a page's first header carries `ScopeTag()` ("per profile" / "all profiles");
+  `Theme.Blue` is for the one main action of a screen, `Theme.Primary` for the others; on/off is a
+  `ToggleSwitch`, never a CheckBox; settings that only apply to one stick mode are hidden, not grayed
+  (`UpdateModeUi()`). App-wide window options live in the ⚙ menu (`ShowSettingsMenu()`), not on a page.
+  The UI says "profile", never "aircraft".
 - Per-aircraft settings go on `Profile`; app-wide ones (HUD, window) on `AppSettings`.
 - New `Profile`, `ButtonBinding` and `AppSettings` properties **must** have initializers: old JSON files
   without them must still load.

@@ -151,7 +151,7 @@ internal static class HudRenderer
 			DrawStrip(g, s);
 			break;
 		case HudStyle.Classic:
-			DrawClassic(g, s);
+			DrawClassic(g, s, numbers);
 			break;
 		default:
 			DrawSidestick(g, s, panel: true, labels: true, numbers);
@@ -566,7 +566,8 @@ internal static class HudRenderer
 
 	// 260 x 284: the original HUD, now with roll trim and ROLL L/R instead of BANK (it shows the stick, not attitude),
 	// and a rudder ball under the ring, like the inclinometer of a turn coordinator. 270 high without the rudder.
-	private static void DrawClassic(Graphics g, HudState s)
+	// Without numbers the trim and rudder values go; the ring's trim marks and the ball still show them.
+	private static void DrawClassic(Graphics g, HudState s, bool numbers)
 	{
 		float pad = 12f;
 		float pw = 236f;
@@ -654,13 +655,20 @@ internal static class HudRenderer
 				Dot(g, A(Theme.Cyan, 0.25), bx, by, 8.5f);
 			}
 			Dot(g, (!s.RudderOn) ? Color.FromArgb(90, 160, 168, 178) : (s.Active ? A(Theme.Cyan, 0.95) : Color.FromArgb(200, 160, 168, 178)), bx, by, 4.5f);
-			Text(g, s.RudderOn ? ("RUD " + Percent(s.Rudder)) : "RUD OFF", 11f, s.RudderOn ? A(Theme.Cyan, 0.9) : Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
+			if (!s.RudderOn)
+			{
+				Text(g, "RUD OFF", 11f, Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
+			}
+			else if (numbers)
+			{
+				Text(g, "RUD " + Percent(s.Rudder), 11f, A(Theme.Cyan, 0.9), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
+			}
 		}
 		double off = s.Roll - s.RollTrim;
 		string roll = ((Math.Abs(off) < 0.03) ? "ROLL CTR" : ((off > 0.0) ? "ROLL R" : "ROLL L"));
 		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + ph - 10f);
 		Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : "STANDBY"), 11f, s.Active ? A(Theme.Green, 0.9) : (s.Freelook ? TextColor(active: false) : Color.FromArgb(230, 200, 120, 120)), pad + pw - 8f, pad + 16f, StringAlignment.Far);
-		string trim = TrimText(s, " ");
+		string trim = (numbers ? TrimText(s, " ") : "");
 		if (trim.Length > 0)
 		{
 			Text(g, "TRIM " + trim, 11f, A(Theme.Amber, 0.9), pad + 8f, pad + 16f);

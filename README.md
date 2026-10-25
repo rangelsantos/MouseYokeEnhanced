@@ -60,21 +60,23 @@ light up while their keys are down, and **Keys in use** lists your current bindi
 Press **F9** or click **Activate** to start flying with the mouse. Press **F9** again to get the
 pointer back for the cockpit.
 
-The chip at the top right checks vJoy for you (**vJoy 1 · XYZ · 16**). Green means ready; click it
-when it's amber or red to see what's missing. The **ⓘ** button next to it shows the version, the
-credits and links to the repository, its releases and the manual.
+The chip at the top right checks vJoy for you: green **vJoy ready** means all set; click it when
+it's amber or red to see what's missing. The **⚙** menu next to it holds the window options
+(always on top, close to tray, compact window) and **About**, with the version, the credits and
+links to the repository, its releases and the manual.
 
-### Feel — make it respond your way
+### Stick — make it respond your way
 
-<img src="docs/images/feel.png" width="360" align="right" alt="Feel tab">
+<img src="docs/images/stick.png" width="360" align="right" alt="Stick tab">
 
 Pick **Direct** or **Spring** at the top, and turn on **Hold stick position** if the stick should
-stay where it is when you start or stop flying. Then adjust the sliders. The **Response** graph draws
-the curve against a dashed linear line, and while you fly a green dot shows where the mouse sits on
-it.
+stay where it is when you start or stop flying. Then adjust the **Response** sliders and invert an
+axis if needed. The graph draws the curve against a dashed linear line, and while you fly a green
+dot shows where the mouse sits on it.
 
-Sliders that don't apply to the chosen mode are grayed out. Double-click any slider to put it
-back to its starting value.
+Below, only the sliders of the chosen mode are shown (deadzone and smoothing for Direct,
+auto-center for Spring), and **Trim & rudder** sets the trim speed and turns keyboard rudder on.
+Double-click any slider to put it back to its starting value.
 
 <br clear="right">
 
@@ -98,7 +100,7 @@ button number and name it. Then bind that button in the sim's controls.
 A small click-through display drawn over Flight Simulator: stick position, trim, rudder and
 whether you're **ACTIVE** or in **STANDBY**. Choose the style, size and opacity, then drag it
 wherever you like with **Position HUD…**. Rudder and trim indicators only appear when the
-aircraft uses them, or you can show or hide each one yourself.
+profile uses them, or you can show or hide each one yourself.
 
 It also flashes **ACTIVE**, **STANDBY**, **TRIM RESET** or **CENTER** when you press the keys, so you know
 it worked even with the window hidden behind the sim.
@@ -115,7 +117,7 @@ it worked even with the window hidden behind the sim.
 
 <img src="docs/images/compact.png" width="420" alt="Compact window">
 
-Shrink MouseYokeEnhanced to a strip with just the essentials, for a second screen, or drag the full window
+Shrink MouseYokeEnhanced to a strip with just the essentials (**⚙ → Compact window**), for a second screen, or drag the full window
 shorter on a small screen (the tabs scroll and the height is remembered). With **Close to tray**,
 closing the window keeps it running with your keys working. Right-click the tray icon to show
 the window, start or stop flying, or exit. A red dot on the icon, in the tray and on the taskbar,
@@ -135,7 +137,7 @@ means you're flying.
 | *not set* | Freelook (hold) |
 | *not set* | Center stick and rudder |
 
-All of them can be changed on the **Keys** tab, per aircraft profile.
+All of them can be changed on the **Keys** tab, per profile.
 
 ---
 
