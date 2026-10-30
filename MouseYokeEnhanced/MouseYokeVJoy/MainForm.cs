@@ -886,7 +886,7 @@ public partial class MainForm : Form
 	{
 		if (overlay == null || overlay.IsDisposed)
 		{
-			overlay = new OverlayForm(settings.HudStyle, settings.HudNumbers, CurrentHudState());
+			overlay = new OverlayForm(settings.Look, CurrentHudState());
 			overlay.SetOpacityPercent(settings.HudOpacity);
 			overlay.SetFade(settings.HudFade);
 			overlay.DoneClicked += EndHudPosition;

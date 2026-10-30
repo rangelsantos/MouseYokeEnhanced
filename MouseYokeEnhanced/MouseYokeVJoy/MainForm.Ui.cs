@@ -180,6 +180,8 @@ public partial class MainForm
 
 	private Slider tbHudOpacity;
 
+	private Slider tbHudBackground;
+
 	private Segmented segHudRudder;
 
 	private Segmented segHudPitchTrim;
@@ -195,6 +197,8 @@ public partial class MainForm
 	private ToggleSwitch swShowHud;
 
 	private ToggleSwitch swHudNumbers;
+
+	private ToggleSwitch swHudStatus;
 
 	private ToggleSwitch swHudFade;
 
@@ -2216,9 +2220,7 @@ public partial class MainForm
 		segStyle.SelectedIndexChanged += (object? s, EventArgs e) =>
 		{
 			settings.HudStyle = (HudStyle)segStyle.SelectedIndex;
-			overlay?.SetStyle(settings.HudStyle, settings.HudNumbers);
-			ConfigurePreview();
-			SaveSettingsSoon();
+			ApplyHudLook();
 		};
 		AddRow(card, ref cr, segStyle, SizeType.AutoSize, 0, fill: true, 6);
 		// Size is global and lives in overlay.cfg with the position, like before.
@@ -2238,6 +2240,13 @@ public partial class MainForm
 			overlay?.SetOpacityPercent(settings.HudOpacity);
 			ConfigurePreview();
 			SaveSettingsSoon();
+		};
+		tbHudBackground = AddSliderRow(card, ref cr, "Background", "0% = outlines only", 0, 100, 100, "%", autosave: false);
+		toolTip.SetToolTip(tbHudBackground, "The panel behind the HUD. Below 50%, text and marks get a dark outline so they still read");
+		tbHudBackground.ValueChanged += (object? s, EventArgs e) =>
+		{
+			settings.HudBackground = tbHudBackground.Value;
+			ApplyHudLook();
 		};
 		AddRow(t, ref row, card, SizeType.AutoSize, 0);
 		TableLayoutPanel elements = Card();
@@ -2269,10 +2278,14 @@ public partial class MainForm
 		swHudNumbers = Switch("Show numbers", "trim and rudder", (object? s, EventArgs e) =>
 		{
 			settings.HudNumbers = swHudNumbers.Checked;
-			overlay?.SetStyle(settings.HudStyle, settings.HudNumbers);
-			ConfigurePreview();
-			SaveSettingsSoon();
+			ApplyHudLook();
 		});
+		swHudStatus = Switch("Show status", "off: notice in standby", (object? s, EventArgs e) =>
+		{
+			settings.HudStatus = swHudStatus.Checked;
+			ApplyHudLook();
+		});
+		toolTip.SetToolTip(swHudStatus, "Off: nothing while flying; standby and freelook show as a notice in the middle");
 		swHudFade = Switch("Fade when centered", "dims at rest", (object? s, EventArgs e) =>
 		{
 			settings.HudFade = swHudFade.Checked;
@@ -2285,8 +2298,9 @@ public partial class MainForm
 			UpdateOverlayVisibility();
 			SaveSettingsSoon();
 		});
-		AddRow(display, ref dr, SwitchPair(swShowHud, swHudNumbers), SizeType.AutoSize, 0, fill: true, 4);
-		AddRow(display, ref dr, SwitchPair(swHudFade, swHudStandby), SizeType.AutoSize, 0, fill: true, 0);
+		AddRow(display, ref dr, SwitchPair(swShowHud, swHudStandby), SizeType.AutoSize, 0, fill: true, 4);
+		AddRow(display, ref dr, SwitchPair(swHudNumbers, swHudStatus), SizeType.AutoSize, 0, fill: true, 4);
+		AddRow(display, ref dr, swHudFade, SizeType.AutoSize, 0, fill: true, 0);
 		AddRow(t, ref row, display, SizeType.AutoSize, 0);
 		TableLayoutPanel position = Card();
 		int pr = 0;
@@ -2414,7 +2428,17 @@ public partial class MainForm
 
 	private void ConfigurePreview()
 	{
-		hudPreview.Configure(settings.HudStyle, settings.HudNumbers, settings.HudOpacity, tbHudSize.Value);
+		hudPreview.Configure(settings.Look, settings.HudOpacity, tbHudSize.Value);
+	}
+
+	// Style, numbers, background and status all change the drawing, and the first and last can change the size.
+	// Minimal has no panel, so its Background row is hidden.
+	private void ApplyHudLook()
+	{
+		overlay?.SetLook(settings.Look);
+		tbHudBackground.Parent.Visible = settings.HudStyle != HudStyle.Minimal;
+		ConfigurePreview();
+		SaveSettingsSoon();
 	}
 
 	private void ApplySettingsToUi()
@@ -2422,9 +2446,12 @@ public partial class MainForm
 		loading = true;
 		segStyle.SelectedIndex = (int)settings.HudStyle;
 		tbHudOpacity.Value = settings.HudOpacity;
+		tbHudBackground.Value = settings.HudBackground;
+		tbHudBackground.Parent.Visible = settings.HudStyle != HudStyle.Minimal;
 		swShowHud.Checked = settings.ShowHud;
 		swShowHudFly.Checked = settings.ShowHud;
 		swHudNumbers.Checked = settings.HudNumbers;
+		swHudStatus.Checked = settings.HudStatus;
 		swHudFade.Checked = settings.HudFade;
 		swHudStandby.Checked = settings.HudInStandby;
 		segHudRudder.SelectedIndex = (int)settings.HudRudder;

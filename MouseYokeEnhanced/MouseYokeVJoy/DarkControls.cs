@@ -1316,9 +1316,7 @@ internal sealed class HudPreview : PaintedControl
 {
 	private HudState state;
 
-	private HudStyle style;
-
-	private bool numbers = true;
+	private HudLook look = new HudLook(HudStyle.Sidestick, Numbers: true, Background: 100, Status: true);
 
 	private int opacity = 90;
 
@@ -1335,10 +1333,9 @@ internal sealed class HudPreview : PaintedControl
 		AccessibleRole = AccessibleRole.Graphic;
 	}
 
-	public void Configure(HudStyle style, bool numbers, int opacity, int sizePercent)
+	public void Configure(HudLook look, int opacity, int sizePercent)
 	{
-		this.style = style;
-		this.numbers = numbers;
+		this.look = look;
 		this.opacity = opacity;
 		this.sizePercent = sizePercent;
 		Invalidate();
@@ -1382,8 +1379,8 @@ internal sealed class HudPreview : PaintedControl
 			}
 			g.ResetClip();
 		}
-		Size ls = HudRenderer.LogicalSize(style, numbers, state);
-		float baseWidth = style switch
+		Size ls = HudRenderer.LogicalSize(look, state);
+		float baseWidth = look.Style switch
 		{
 			HudStyle.Minimal => 80f,
 			HudStyle.Strip => 230f,
@@ -1399,7 +1396,12 @@ internal sealed class HudPreview : PaintedControl
 			hg.SmoothingMode = SmoothingMode.AntiAlias;
 			hg.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 			hg.ScaleTransform(s, s);
-			HudRenderer.Draw(hg, style, state, numbers);
+			HudRenderer.Draw(hg, look, state);
+			string notice = HudRenderer.StatusNotice(look, state);
+			if (notice != null)
+			{
+				HudRenderer.DrawToast(hg, notice, ls);
+			}
 		}
 		using ImageAttributes ia = new ImageAttributes();
 		ia.SetColorMatrix(new ColorMatrix

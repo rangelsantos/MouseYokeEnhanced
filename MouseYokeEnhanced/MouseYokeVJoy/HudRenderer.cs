@@ -16,6 +16,15 @@ public enum HudStyle
 	Classic
 }
 
+// How the HUD looks: the app-wide options that change the drawing but not the live values. Background is the
+// panel behind it in percent; Status draws the active/standby line.
+public readonly record struct HudLook(HudStyle Style, bool Numbers, int Background, bool Status)
+{
+	// Without much panel, text and marks get a dark outline so they read over a bright sky. Minimal has no panel
+	// and already draws its own shadow.
+	public bool Outlined => Background < 50 && Style != HudStyle.Minimal;
+}
+
 // What the HUD and the Fly monitor show: the stick output sent to vJoy (trim included), plus context.
 public struct HudState
 {
@@ -63,16 +72,42 @@ internal static class HudRenderer
 
 	public const int MonitorHeight = 250;
 
+	// The bands a hidden status line gives back: the top row of the sidestick, the left end of the strip.
+	private const int SidestickStatusBand = 24;
+
+	private const float StripStatusBand = 70f;
+
+	private static readonly Color OutlineColor = Color.FromArgb(200, 0, 0, 0);
+
+	// The Fly monitor: no panel, no text.
+	private static readonly HudLook MonitorLook = new HudLook(HudStyle.Sidestick, Numbers: false, Background: 100, Status: true);
+
 	// Depends on which optional elements are shown: a hidden one leaves no empty space.
-	public static Size LogicalSize(HudStyle style, bool numbers, HudState s)
+	public static Size LogicalSize(HudLook look, HudState s)
 	{
-		return style switch
+		return look.Style switch
 		{
 			HudStyle.Minimal => new Size(160, (int)MinimalHeight(s, out _)),
-			HudStyle.Strip => new Size((int)StripWidth(s, out _, out _), 58),
+			HudStyle.Strip => new Size((int)StripWidth(look, s, out _, out _), 58),
 			HudStyle.Classic => new Size(260, (int)ClassicPanelHeight(s) + 24),
-			_ => new Size(SidestickWidth(s), (int)SidestickRows(s, numbers, out _, out _, out _)),
+			_ => new Size(SidestickWidth(s), (int)SidestickRows(s, look.Numbers, out _, out _, out _) - SidestickLift(look)),
 		};
+	}
+
+	private static int SidestickLift(HudLook look)
+	{
+		return look.Status ? 0 : SidestickStatusBand;
+	}
+
+	private static float StripLift(HudLook look)
+	{
+		return look.Status ? 0f : StripStatusBand;
+	}
+
+	// A panel's alpha scaled by the Background setting.
+	private static int PanelAlpha(HudLook look, int full)
+	{
+		return full * look.Background / 100;
 	}
 
 	// Without the pitch trim scale the box is centered (28 px on each side).
@@ -110,9 +145,9 @@ internal static class HudRenderer
 		return s.ShowRudder ? (rudderY + 8f) : (s.ShowRollTrim ? 148f : 142f);
 	}
 
-	private static float StripWidth(HudState s, out float rudderX, out float trimX)
+	private static float StripWidth(HudLook look, HudState s, out float rudderX, out float trimX)
 	{
-		float x = (s.ShowPitchTrim ? 140f : 134f);
+		float x = (s.ShowPitchTrim ? 140f : 134f) - StripLift(look);
 		rudderX = x + 10f;
 		if (s.ShowRudder)
 		{
@@ -140,21 +175,21 @@ internal static class HudRenderer
 		return p + ((p.Length > 0 && r.Length > 0) ? gap : "") + r;
 	}
 
-	public static void Draw(Graphics g, HudStyle style, HudState s, bool numbers)
+	public static void Draw(Graphics g, HudLook look, HudState s)
 	{
-		switch (style)
+		switch (look.Style)
 		{
 		case HudStyle.Minimal:
-			DrawMinimal(g, s);
+			DrawMinimal(g, look, s);
 			break;
 		case HudStyle.Strip:
-			DrawStrip(g, s);
+			DrawStrip(g, look, s);
 			break;
 		case HudStyle.Classic:
-			DrawClassic(g, s, numbers);
+			DrawClassic(g, look, s);
 			break;
 		default:
-			DrawSidestick(g, s, panel: true, labels: true, numbers);
+			DrawSidestick(g, look, s, panel: true, labels: true);
 			break;
 		}
 	}
@@ -164,7 +199,22 @@ internal static class HudRenderer
 	public static void DrawMonitor(Graphics g, HudState s)
 	{
 		s.ShowRudder = (s.ShowPitchTrim = (s.ShowRollTrim = true));
-		DrawSidestick(g, s, panel: false, labels: false, numbers: false);
+		DrawSidestick(g, MonitorLook, s, panel: false, labels: false);
+	}
+
+	// With the status line hidden, standby and freelook show as a fixed notice in the middle (a real notice,
+	// like "TRIM RESET", takes its place while it lasts); flying shows nothing.
+	public static string StatusNotice(HudLook look, HudState s)
+	{
+		if (look.Status || s.Active)
+		{
+			return null;
+		}
+		if (s.Freelook)
+		{
+			return "FREELOOK";
+		}
+		return string.IsNullOrEmpty(s.ToggleKey) ? "STANDBY" : ("STANDBY · " + s.ToggleKey);
 	}
 
 	// A short notice in the middle of the HUD ("ACTIVE", "TRIM RESET"), drawn over everything else.
@@ -231,8 +281,8 @@ internal static class HudRenderer
 		return active ? Theme.Green : Color.FromArgb(230, 200, 205, 210);
 	}
 
-	// Text placed on its baseline, like a canvas fillText.
-	private static void Text(Graphics g, string text, float px, Color color, float x, float baseline, StringAlignment align = StringAlignment.Near)
+	// Text placed on its baseline, like a canvas fillText. Outlined, it is drawn as a path with a dark stroke.
+	private static void Text(Graphics g, string text, float px, Color color, float x, float baseline, StringAlignment align = StringAlignment.Near, bool outlined = false)
 	{
 		Font f = F(px);
 		float ascent = px * (float)f.FontFamily.GetCellAscent(f.Style) / (float)f.FontFamily.GetEmHeight(f.Style);
@@ -242,8 +292,38 @@ internal static class HudRenderer
 			float w = g.MeasureString(text, f, PointF.Empty, Typographic).Width;
 			left = ((align == StringAlignment.Far) ? (x - w) : (x - w / 2f));
 		}
-		using SolidBrush b = new SolidBrush(color);
-		g.DrawString(text, f, b, left, baseline - ascent, Typographic);
+		if (!outlined)
+		{
+			using SolidBrush b = new SolidBrush(color);
+			g.DrawString(text, f, b, left, baseline - ascent, Typographic);
+			return;
+		}
+		using GraphicsPath path = new GraphicsPath();
+		path.AddString(text, f.FontFamily, (int)f.Style, px, new PointF(left, baseline - ascent), Typographic);
+		using (Pen stroke = new Pen(Color.FromArgb(215, 0, 0, 0), Math.Max(2.2f, px * 0.2f))
+		{
+			LineJoin = LineJoin.Round
+		})
+		{
+			g.DrawPath(stroke, path);
+		}
+		using SolidBrush fill = new SolidBrush(color);
+		g.FillPath(fill, path);
+	}
+
+	// Outlined: a dark, wider copy of a line under it, so a thin mark reads over a bright sky.
+	private static void Under(Graphics g, bool outlined, float width, float x1, float y1, float x2, float y2)
+	{
+		if (!outlined)
+		{
+			return;
+		}
+		using Pen pen = new Pen(OutlineColor, width + 2.5f)
+		{
+			StartCap = LineCap.Round,
+			EndCap = LineCap.Round
+		};
+		g.DrawLine(pen, x1, y1, x2, y2);
 	}
 
 	public static GraphicsPath Rounded(RectangleF r, float rad)
@@ -265,8 +345,12 @@ internal static class HudRenderer
 		g.FillPath(b, p);
 	}
 
-	private static void Brackets(Graphics g, float x, float y, float s, float len, Color color, float width)
+	private static void Brackets(Graphics g, float x, float y, float s, float len, Color color, float width, bool outlined = false)
 	{
+		if (outlined)
+		{
+			Brackets(g, x, y, s, len, OutlineColor, width + 2.5f);
+		}
 		using Pen pen = new Pen(color, width)
 		{
 			StartCap = LineCap.Square,
@@ -321,7 +405,7 @@ internal static class HudRenderer
 	}
 
 	// A trim pointer; "left" points at x from the right, otherwise it points up at y from below.
-	private static void Pointer(Graphics g, float x, float y, bool left, float s, Color color)
+	private static void Pointer(Graphics g, float x, float y, bool left, float s, Color color, bool outlined = false)
 	{
 		PointF[] pts = (left ? new PointF[3]
 		{
@@ -334,30 +418,51 @@ internal static class HudRenderer
 			new PointF(x - s * 0.7f, y + s),
 			new PointF(x + s * 0.7f, y + s)
 		});
+		if (outlined)
+		{
+			using Pen edge = new Pen(OutlineColor, 2.5f)
+			{
+				LineJoin = LineJoin.Round
+			};
+			g.DrawPolygon(edge, pts);
+		}
 		using SolidBrush b = new SolidBrush(color);
 		g.FillPolygon(b, pts);
 	}
 
-	private static void Dot(Graphics g, Color c, float x, float y, float r)
+	// Outlined, a solid dot gets a dark ring; a faint one (a glow, an unused ball) stays as it is.
+	private static void Dot(Graphics g, Color c, float x, float y, float r, bool outlined = false)
 	{
+		if (outlined && c.A > 150)
+		{
+			using SolidBrush ring = new SolidBrush(OutlineColor);
+			g.FillEllipse(ring, x - r - 1.7f, y - r - 1.7f, (r + 1.7f) * 2f, (r + 1.7f) * 2f);
+		}
 		using SolidBrush b = new SolidBrush(c);
 		g.FillEllipse(b, x - r, y - r, r * 2f, r * 2f);
 	}
 
 	// 240 x 280 with everything shown (260 without numbers). Inspired by the Airbus sidestick indicator: the
 	// brackets are full travel, the cross is the output, the amber pointers are the trims and the bottom bar is the rudder.
-	private static void DrawSidestick(Graphics g, HudState s, bool panel, bool labels, bool numbers)
+	// Without the status row everything moves up into its band.
+	private static void DrawSidestick(Graphics g, HudLook look, HudState s, bool panel, bool labels)
 	{
+		bool numbers = look.Numbers;
+		bool o = look.Outlined;
 		float width = SidestickWidth(s);
 		float height = SidestickRows(s, numbers, out var rollY, out var rudderY, out var numbersY);
-		if (panel)
+		int lift = (labels ? SidestickLift(look) : 0);
+		if (panel && look.Background > 0)
 		{
-			using GraphicsPath p = Rounded(new RectangleF(4f, 4f, width - 8f, height - 8f), 14f);
-			using SolidBrush bg = new SolidBrush(Color.FromArgb(160, 10, 13, 19));
-			using Pen edge = new Pen(Color.FromArgb(18, 255, 255, 255), 1f);
+			using GraphicsPath p = Rounded(new RectangleF(4f, 4f, width - 8f, height - 8f - (float)lift), 14f);
+			using SolidBrush bg = new SolidBrush(Color.FromArgb(PanelAlpha(look, 160), 10, 13, 19));
+			using Pen edge = new Pen(Color.FromArgb(PanelAlpha(look, 18), 255, 255, 255), 1f);
 			g.FillPath(bg, p);
 			g.DrawPath(edge, p);
 		}
+		GraphicsState lifted = g.Save();
+		g.TranslateTransform(0f, -lift);
+		labels = labels && look.Status;
 		float x0 = 28f;
 		float y0 = 40f;
 		float size = 160f;
@@ -367,33 +472,59 @@ internal static class HudRenderer
 		if (labels)
 		{
 			Color tc = TextColor(s.Active);
-			Dot(g, tc, 22f, 22f, 3.5f);
+			Dot(g, tc, 22f, 22f, 3.5f, o);
 			string standby = (string.IsNullOrEmpty(s.ToggleKey) ? "STANDBY" : ("STANDBY · " + s.ToggleKey));
-			Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : standby), 12f, tc, 32f, 26f);
-			Text(g, s.Spring ? "SPRING" : "DIRECT", 12f, A(Theme.Cyan, 0.85), width - 28f, 26f, StringAlignment.Far);
+			Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : standby), 12f, tc, 32f, 26f, outlined: o);
+			Text(g, s.Spring ? "SPRING" : "DIRECT", 12f, A(Theme.Cyan, 0.85), width - 28f, 26f, StringAlignment.Far, o);
 		}
-		using (Pen faint = new Pen(Color.FromArgb(41, 255, 255, 255), 1f)
+		if (o)
 		{
-			DashPattern = new float[2] { 3f, 4f }
-		})
+			// The faint center guide vanishes without a panel: each dash gets a thin dark edge and more white. Flat
+			// caps and a wider gap keep the dashes apart, so it stays a light guide under the cross.
+			using Pen shade = new Pen(Color.FromArgb(104, 0, 0, 0), 1.5f);
+			using Pen dash = new Pen(Color.FromArgb(165, 255, 255, 255), 1f);
+			for (float d = 8f; d < size - 8f; d += 9f)
+			{
+				float e = Math.Min(d + 4f, size - 8f);
+				g.DrawLine(shade, x0 + d, cy, x0 + e, cy);
+				g.DrawLine(shade, cx, y0 + d, cx, y0 + e);
+			}
+			for (float d = 8f; d < size - 8f; d += 9f)
+			{
+				float e = Math.Min(d + 4f, size - 8f);
+				g.DrawLine(dash, x0 + d, cy, x0 + e, cy);
+				g.DrawLine(dash, cx, y0 + d, cx, y0 + e);
+			}
+		}
+		else
 		{
+			using Pen faint = new Pen(Color.FromArgb(41, 255, 255, 255), 1f)
+			{
+				DashPattern = new float[2] { 3f, 4f }
+			};
 			g.DrawLine(faint, x0 + 8f, cy, x0 + size - 8f, cy);
 			g.DrawLine(faint, cx, y0 + 8f, cx, y0 + size - 8f);
 		}
 		if (!s.Spring && s.Deadzone > 0.0)
 		{
 			float r = Math.Max(3f, (float)s.Deadzone * h);
-			using Pen dz = new Pen(Color.FromArgb(72, 255, 255, 255), 1f)
+			if (o)
+			{
+				using Pen ring = new Pen(Color.FromArgb(136, 0, 0, 0), 1.6f);
+				g.DrawEllipse(ring, cx - r, cy - r, r * 2f, r * 2f);
+			}
+			using Pen dz = new Pen(Color.FromArgb(o ? 210 : 72, 255, 255, 255), o ? 1.2f : 1f)
 			{
 				DashPattern = new float[2] { 1.5f, 3f }
 			};
 			g.DrawEllipse(dz, cx - r, cy - r, r * 2f, r * 2f);
 		}
-		Brackets(g, x0, y0, size, 22f, FrameColor(s.Active), 2.2f);
+		Brackets(g, x0, y0, size, 22f, FrameColor(s.Active), 2.2f, o);
 		using (Pen scale = new Pen(Color.FromArgb(77, 255, 255, 255), 1.2f))
 		{
 			if (s.ShowPitchTrim)
 			{
+				Under(g, o, 1.2f, 200f, y0, 200f, y0 + size);
 				g.DrawLine(scale, 200f, y0, 200f, y0 + size);
 				for (int i = 0; i <= 4; i++)
 				{
@@ -403,6 +534,7 @@ internal static class HudRenderer
 			}
 			if (s.ShowRollTrim)
 			{
+				Under(g, o, 1.2f, x0, rollY, x0 + size, rollY);
 				g.DrawLine(scale, x0, rollY, x0 + size, rollY);
 				for (int j = 0; j <= 4; j++)
 				{
@@ -413,15 +545,15 @@ internal static class HudRenderer
 		}
 		if (s.ShowPitchTrim)
 		{
-			Pointer(g, 203f, cy + (float)s.PitchTrim * h, left: true, 8f, Theme.Amber);
+			Pointer(g, 203f, cy + (float)s.PitchTrim * h, left: true, 8f, Theme.Amber, o);
 		}
 		if (s.ShowRollTrim)
 		{
-			Pointer(g, cx + (float)s.RollTrim * h, rollY + 3f, left: false, 8f, Theme.Amber);
+			Pointer(g, cx + (float)s.RollTrim * h, rollY + 3f, left: false, 8f, Theme.Amber, o);
 		}
 		if (s.ShowRudder)
 		{
-			FillRounded(g, Color.FromArgb(26, 255, 255, 255), x0, rudderY, size, 10f, 5f);
+			FillRounded(g, o ? Color.FromArgb(140, 0, 0, 0) : Color.FromArgb(26, 255, 255, 255), x0, rudderY, size, 10f, 5f);
 			float rx = cx + (float)s.Rudder * h;
 			using (SolidBrush rb = new SolidBrush(s.Active ? A(Theme.Cyan, 0.75) : Color.FromArgb(128, 160, 168, 178)))
 			{
@@ -433,17 +565,17 @@ internal static class HudRenderer
 			}
 			if (s.ShowPitchTrim)
 			{
-				Text(g, "RUD", 10f, Color.FromArgb(179, 220, 225, 230), 196f, rudderY + 9f);
+				Text(g, "RUD", 10f, Color.FromArgb(179, 220, 225, 230), 196f, rudderY + 9f, outlined: o);
 			}
 			else
 			{
 				// No room right of the track in the narrow panel: the label goes inside its left end.
-				Text(g, "RUD", 9f, Color.FromArgb(204, 220, 225, 230), x0 + 6f, rudderY + 8.5f);
+				Text(g, "RUD", 9f, Color.FromArgb(204, 220, 225, 230), x0 + 6f, rudderY + 8.5f, outlined: o);
 			}
 			if (!s.RudderOn)
 			{
 				// Inside the right half of the empty track, clear of the roll trim pointer above the center.
-				Text(g, "OFF", 9f, Color.FromArgb(204, 220, 225, 230), cx + 44f, rudderY + 8.5f, StringAlignment.Center);
+				Text(g, "OFF", 9f, Color.FromArgb(204, 220, 225, 230), cx + 44f, rudderY + 8.5f, StringAlignment.Center, o);
 			}
 		}
 		Cross(g, cx + (float)s.Roll * h, cy + (float)s.Pitch * h, 9f, MarkColor(s.Active), 2.6f);
@@ -452,23 +584,24 @@ internal static class HudRenderer
 			string trim = TrimText(s, "   ");
 			if (trim.Length > 0)
 			{
-				Text(g, "TRIM  " + trim, 12f, Theme.Amber, 18f, numbersY);
+				Text(g, "TRIM  " + trim, 12f, Theme.Amber, 18f, numbersY, outlined: o);
 			}
 			if (s.ShowRudder)
 			{
-				Text(g, "RUD " + Signed(s.Rudder), 12f, A(Theme.Cyan, 0.9), width - 18f, numbersY, StringAlignment.Far);
+				Text(g, "RUD " + Signed(s.Rudder), 12f, A(Theme.Cyan, 0.9), width - 18f, numbersY, StringAlignment.Far, o);
 			}
 		}
+		g.Restore(lifted);
 	}
 
 	// 160 x 160 with everything shown, no panel. Every mark is drawn twice, first as a dark offset copy, so it reads on a bright sky.
-	private static void DrawMinimal(Graphics g, HudState s)
+	private static void DrawMinimal(Graphics g, HudLook look, HudState s)
 	{
-		DrawMinimalLayer(g, s, shadow: true);
-		DrawMinimalLayer(g, s, shadow: false);
+		DrawMinimalLayer(g, look, s, shadow: true);
+		DrawMinimalLayer(g, look, s, shadow: false);
 	}
 
-	private static void DrawMinimalLayer(Graphics g, HudState s, bool shadow)
+	private static void DrawMinimalLayer(Graphics g, HudLook look, HudState s, bool shadow)
 	{
 		Color sh = Color.FromArgb(150, 0, 0, 0);
 		float o = (shadow ? 1.2f : 0f);
@@ -478,8 +611,11 @@ internal static class HudRenderer
 		float cy = 80f;
 		float h = 52f;
 		Brackets(g, x0 + o, x0 + o, size, 16f, shadow ? sh : FrameColor(s.Active), 2.2f);
-		Dot(g, shadow ? sh : TextColor(s.Active), x0 + o, 16f + o, 3.5f);
-		if (!s.Active)
+		if (look.Status)
+		{
+			Dot(g, shadow ? sh : TextColor(s.Active), x0 + o, 16f + o, 3.5f);
+		}
+		if (!s.Active && look.Status)
 		{
 			Text(g, s.Freelook ? "LOOK" : "STBY", 10f, shadow ? sh : TextColor(active: false), x0 + 8f + o, 20f + o);
 		}
@@ -519,29 +655,36 @@ internal static class HudRenderer
 		}
 	}
 
-	// 360 x 58 with everything shown: a thin bar for a screen edge. Hidden elements make it shorter.
-	private static void DrawStrip(Graphics g, HudState s)
+	// 360 x 58 with everything shown: a thin bar for a screen edge. Hidden elements (and the status) make it shorter.
+	private static void DrawStrip(Graphics g, HudLook look, HudState s)
 	{
-		float width = StripWidth(s, out var rudX, out var trimX);
-		FillRounded(g, Color.FromArgb(168, 10, 13, 19), 2f, 2f, width - 4f, 54f, 10f);
+		bool o = look.Outlined;
+		float width = StripWidth(look, s, out var rudX, out var trimX);
+		if (look.Background > 0)
+		{
+			FillRounded(g, Color.FromArgb(PanelAlpha(look, 168), 10, 13, 19), 2f, 2f, width - 4f, 54f, 10f);
+		}
 		Color tc = TextColor(s.Active);
-		Dot(g, tc, 16f, 29f, 3.5f);
-		Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "LOOK" : "STBY"), 12f, tc, 25f, 33f);
-		float bx = 86f;
+		if (look.Status)
+		{
+			Dot(g, tc, 16f, 29f, 3.5f, o);
+			Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "LOOK" : "STBY"), 12f, tc, 25f, 33f, outlined: o);
+		}
+		float bx = 86f - StripLift(look);
 		float by = 8f;
 		float bc = bx + 21f;
 		float bcy = by + 21f;
-		Brackets(g, bx, by, 42f, 8f, FrameColor(s.Active), 1.8f);
+		Brackets(g, bx, by, 42f, 8f, FrameColor(s.Active), 1.8f, o);
 		if (s.ShowPitchTrim)
 		{
-			Pointer(g, bx + 45f, bcy + (float)s.PitchTrim * 21f, left: true, 5f, Theme.Amber);
+			Pointer(g, bx + 45f, bcy + (float)s.PitchTrim * 21f, left: true, 5f, Theme.Amber, o);
 		}
 		Cross(g, bc + (float)s.Roll * 21f, bcy + (float)s.Pitch * 21f, 5f, MarkColor(s.Active), 2f);
 		if (s.ShowRudder)
 		{
 			float mid = rudX + 50f;
-			Text(g, s.RudderOn ? "RUD" : "RUD OFF", 10f, Color.FromArgb(179, 220, 225, 230), rudX, 24f);
-			FillRounded(g, Color.FromArgb(31, 255, 255, 255), rudX, 30f, 100f, 8f, 4f);
+			Text(g, s.RudderOn ? "RUD" : "RUD OFF", 10f, Color.FromArgb(179, 220, 225, 230), rudX, 24f, outlined: o);
+			FillRounded(g, o ? Color.FromArgb(140, 0, 0, 0) : Color.FromArgb(31, 255, 255, 255), rudX, 30f, 100f, 8f, 4f);
 			float rx = mid + (float)s.Rudder * 50f;
 			using (SolidBrush rb = new SolidBrush(A(Theme.Cyan, 0.75)))
 			{
@@ -555,27 +698,33 @@ internal static class HudRenderer
 		// Two lines, or a single one centered when only one trim is shown.
 		if (s.ShowPitchTrim && s.ShowRollTrim)
 		{
-			Text(g, "P TRIM " + Percent(s.PitchTrim), 12f, Theme.Amber, trimX, 25f);
-			Text(g, "R TRIM " + Percent(s.RollTrim), 12f, Theme.Amber, trimX, 43f);
+			Text(g, "P TRIM " + Percent(s.PitchTrim), 12f, Theme.Amber, trimX, 25f, outlined: o);
+			Text(g, "R TRIM " + Percent(s.RollTrim), 12f, Theme.Amber, trimX, 43f, outlined: o);
 		}
 		else if (s.ShowPitchTrim || s.ShowRollTrim)
 		{
-			Text(g, s.ShowPitchTrim ? ("P TRIM " + Percent(s.PitchTrim)) : ("R TRIM " + Percent(s.RollTrim)), 12f, Theme.Amber, trimX, 34f);
+			Text(g, s.ShowPitchTrim ? ("P TRIM " + Percent(s.PitchTrim)) : ("R TRIM " + Percent(s.RollTrim)), 12f, Theme.Amber, trimX, 34f, outlined: o);
 		}
 	}
 
 	// 260 x 284: the original HUD, now with roll trim and ROLL L/R instead of BANK (it shows the stick, not attitude),
 	// and a rudder ball under the ring, like the inclinometer of a turn coordinator. 270 high without the rudder.
-	// Without numbers the trim and rudder values go; the ring's trim marks and the ball still show them.
-	private static void DrawClassic(Graphics g, HudState s, bool numbers)
+	// Without numbers the trim and rudder values go; the ring's trim marks and the ball still show them. The sky and
+	// ground tint inside the ring is part of the instrument, so it stays whatever the Background.
+	private static void DrawClassic(Graphics g, HudLook look, HudState s)
 	{
+		bool numbers = look.Numbers;
+		bool o = look.Outlined;
 		float pad = 12f;
 		float pw = 236f;
 		float ph = ClassicPanelHeight(s);
 		float cx = 130f;
 		float cy = 130f;
 		float r = 112f;
-		FillRounded(g, Color.FromArgb(200, 12, 14, 20), pad, pad, pw, ph, 18f);
+		if (look.Background > 0)
+		{
+			FillRounded(g, Color.FromArgb(PanelAlpha(look, 200), 12, 14, 20), pad, pad, pw, ph, 18f);
+		}
 		using (GraphicsPath clip = new GraphicsPath())
 		{
 			clip.AddEllipse(cx - r, cy - r, r * 2f, r * 2f);
@@ -597,44 +746,62 @@ internal static class HudRenderer
 			}
 			g.Restore(saved);
 		}
-		using (Pen ring = new Pen(Color.FromArgb(120, 90, 150, 170), 1.4f))
+		if (o)
+		{
+			using Pen ringEdge = new Pen(OutlineColor, 3.6f);
+			g.DrawEllipse(ringEdge, cx - r, cy - r, r * 2f, r * 2f);
+		}
+		using (Pen ring = new Pen(o ? Color.FromArgb(220, 90, 150, 170) : Color.FromArgb(120, 90, 150, 170), 1.4f))
 		{
 			g.DrawEllipse(ring, cx - r, cy - r, r * 2f, r * 2f);
 		}
+		PointF[] symbol = new PointF[5]
+		{
+			new PointF(cx - 26f, cy),
+			new PointF(cx - 8f, cy),
+			new PointF(cx, cy + 7f),
+			new PointF(cx + 8f, cy),
+			new PointF(cx + 26f, cy)
+		};
+		if (o)
+		{
+			using Pen acpEdge = new Pen(OutlineColor, 4.7f)
+			{
+				LineJoin = LineJoin.Round,
+				StartCap = LineCap.Round,
+				EndCap = LineCap.Round
+			};
+			g.DrawLines(acpEdge, symbol);
+		}
 		using (Pen acp = new Pen(Color.White, 2.2f))
 		{
-			g.DrawLines(acp, new PointF[5]
-			{
-				new PointF(cx - 26f, cy),
-				new PointF(cx - 8f, cy),
-				new PointF(cx, cy + 7f),
-				new PointF(cx + 8f, cy),
-				new PointF(cx + 26f, cy)
-			});
+			g.DrawLines(acp, symbol);
 		}
 		using (Pen tp = new Pen(Theme.Amber, 2f))
 		{
 			if (s.ShowPitchTrim)
 			{
 				float ty = cy + (float)s.PitchTrim * r;
+				Under(g, o, 2f, cx + r - 14f, ty, cx + r - 2f, ty);
 				g.DrawLine(tp, cx + r - 14f, ty, cx + r - 2f, ty);
 			}
 			if (s.ShowRollTrim)
 			{
 				float tx = cx + (float)s.RollTrim * r;
+				Under(g, o, 2f, tx, cy + r - 14f, tx, cy + r - 2f);
 				g.DrawLine(tp, tx, cy + r - 14f, tx, cy + r - 2f);
 			}
 		}
 		float dx = cx + (float)s.Roll * r;
 		float dy = cy + (float)s.Pitch * r;
 		Dot(g, Color.FromArgb(70, 120, 255, 140), dx, dy, 11f);
-		Dot(g, s.Active ? Theme.Green : Color.FromArgb(190, 195, 200), dx, dy, 5f);
+		Dot(g, s.Active ? Theme.Green : Color.FromArgb(190, 195, 200), dx, dy, 5f, o);
 		if (s.ShowRudder)
 		{
 			float ra = r + 14f;
 			float span = 22f;
 			RectangleF arc = new RectangleF(cx - ra, cy - ra, ra * 2f, ra * 2f);
-			using (Pen tube = new Pen(Color.FromArgb(34, 255, 255, 255), 11f)
+			using (Pen tube = new Pen(o ? Color.FromArgb(140, 0, 0, 0) : Color.FromArgb(34, 255, 255, 255), 11f)
 			{
 				StartCap = LineCap.Round,
 				EndCap = LineCap.Round
@@ -654,24 +821,27 @@ internal static class HudRenderer
 			{
 				Dot(g, A(Theme.Cyan, 0.25), bx, by, 8.5f);
 			}
-			Dot(g, (!s.RudderOn) ? Color.FromArgb(90, 160, 168, 178) : (s.Active ? A(Theme.Cyan, 0.95) : Color.FromArgb(200, 160, 168, 178)), bx, by, 4.5f);
+			Dot(g, (!s.RudderOn) ? Color.FromArgb(90, 160, 168, 178) : (s.Active ? A(Theme.Cyan, 0.95) : Color.FromArgb(200, 160, 168, 178)), bx, by, 4.5f, o);
 			if (!s.RudderOn)
 			{
-				Text(g, "RUD OFF", 11f, Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
+				Text(g, "RUD OFF", 11f, Color.FromArgb(204, 220, 225, 230), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far, o);
 			}
 			else if (numbers)
 			{
-				Text(g, "RUD " + Percent(s.Rudder), 11f, A(Theme.Cyan, 0.9), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far);
+				Text(g, "RUD " + Percent(s.Rudder), 11f, A(Theme.Cyan, 0.9), pad + pw - 8f, pad + ph - 10f, StringAlignment.Far, o);
 			}
 		}
 		double off = s.Roll - s.RollTrim;
 		string roll = ((Math.Abs(off) < 0.03) ? "ROLL CTR" : ((off > 0.0) ? "ROLL R" : "ROLL L"));
-		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + ph - 10f);
-		Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : "STANDBY"), 11f, s.Active ? A(Theme.Green, 0.9) : (s.Freelook ? TextColor(active: false) : Color.FromArgb(230, 200, 120, 120)), pad + pw - 8f, pad + 16f, StringAlignment.Far);
+		Text(g, roll, 11f, A(Theme.Cyan, 0.9), pad + 8f, pad + ph - 10f, outlined: o);
+		if (look.Status)
+		{
+			Text(g, s.Active ? "ACTIVE" : (s.Freelook ? "FREELOOK" : "STANDBY"), 11f, s.Active ? A(Theme.Green, 0.9) : (s.Freelook ? TextColor(active: false) : Color.FromArgb(230, 200, 120, 120)), pad + pw - 8f, pad + 16f, StringAlignment.Far, o);
+		}
 		string trim = (numbers ? TrimText(s, " ") : "");
 		if (trim.Length > 0)
 		{
-			Text(g, "TRIM " + trim, 11f, A(Theme.Amber, 0.9), pad + 8f, pad + 16f);
+			Text(g, "TRIM " + trim, 11f, A(Theme.Amber, 0.9), pad + 8f, pad + 16f, outlined: o);
 		}
 	}
 }

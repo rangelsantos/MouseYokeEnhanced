@@ -63,7 +63,7 @@ confines it to the primary monitor.
 | `MainForm.cs` | Logic: control loop, Raw Input, vJoy setup and checks, key handling, profile actions, HUD visibility |
 | `MainForm.Ui.cs` | The screens, built in code (no designer): header, tabs Fly/Stick/Keys/HUD, status bar, compact window, tray, hotkey and button lists, ⚙ menu (window options) and About dialog (version, credits, links) |
 | `DarkControls.cs` | Owner-drawn controls: `Slider`, `ToggleSwitch`, `Segmented`, `TabButton`, `ActivateButton`, `StickMonitor`, `CurveView`, `LampStrip`, `KeyLegend`, `Stepper`, `HudPreview`, dark menus |
-| `HudRenderer.cs` | Draws the four HUD styles (`HudStyle`) from a `HudState`; shared by the overlay, the Fly monitor and the HUD preview |
+| `HudRenderer.cs` | Draws the four HUD styles from a `HudLook` (style and display options) and a `HudState` (live values); shared by the overlay, the Fly monitor and the HUD preview |
 | `OverlayForm.cs` | Click-through HUD: per-pixel-alpha layered window (`UpdateLayeredWindow`), never activates; position mode with Done; notices |
 | `Theme.cs` | Palette and fonts |
 | `BrandIcon.cs` | Window and tray icons from the embedded `MouseYoke.ico`, and the "flying" variant with a red dot (set in `ToggleActive()`) |
@@ -97,8 +97,12 @@ confines it to the primary monitor.
   default `DefaultHeight`), enforced by `SetWindowSize()` (Minimum/MaximumSize) and `SizingHit()` in
   `WndProc` (no horizontal or compact resize). `OnResizeEnd` stores the client height in
   `AppSettings.WindowHeight` (0 = default). Every page must scroll (`Scroller()` or its own scrolling list).
-- `OverlayForm` takes the style in its constructor: `overlay.cfg` stores the top-left corner, and a later
-  style change keeps the center, so creating it with the wrong size would move the HUD on every start.
+- `OverlayForm` takes the `HudLook` in its constructor: `overlay.cfg` stores the top-left corner, and a later
+  look change keeps the center, so creating it with the wrong size would move the HUD on every start.
+- `HudLook` (style, numbers, background, status) is what changes the HUD's drawing; it comes from
+  `AppSettings.Look` and goes to the overlay (`SetLook`) and the HUD preview together. Below 50% background
+  the renderer outlines text and marks (`HudLook.Outlined`); with the status hidden, standby and freelook
+  show as a fixed notice (`StatusNotice()`), which a real `HudToast` replaces while it lasts.
 
 ## Hotkeys (per profile)
 

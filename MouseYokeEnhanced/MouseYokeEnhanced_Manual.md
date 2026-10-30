@@ -232,7 +232,11 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
   stick), **Minimal** (just the brackets and the cross), **Strip** (a thin bar for the edge of
   the screen) or **Classic** (the original round display, with a rudder ball underneath, like a
   turn coordinator's). The preview at the top shows it.
-- **Size** (50–250%) and **Opacity**.
+- **Size** (50–250%) and **Opacity**. Opacity fades the whole HUD.
+- **Background** — the dark panel behind the HUD, from 100% down to 0% (just the marks over the
+  sim). Below 50%, text and marks get a dark outline so they still read over a bright sky.
+  Minimal has no panel, so the setting is hidden for it. On Classic, the sky and ground tint
+  inside the ring stays: it's part of the instrument.
 - **Elements** — the rudder, the pitch trim and the roll trim each have **Auto**, **Show** or
   **Hide**. **Auto** (the default) shows an element only when this profile uses it: the rudder
   when **Keyboard rudder** is on, a trim when it has a key. A trim that is still applied stays on
@@ -243,10 +247,14 @@ whether you're flying (**ACTIVE**) or not (**STANDBY**). Everything is on the **
 Under **Display**:
 
 - **Show HUD** — turn it off if you don't want a HUD at all (also on the Fly tab).
+- **Show in standby** — keep the HUD on screen (grayed) when you're not flying.
 - **Show numbers** — the trim and rudder values on the Sidestick and Classic HUDs (the Strip
   always shows its trim values, since they are its only roll trim display).
+- **Show status** — the **ACTIVE** / **STANDBY** line (and **DIRECT** / **SPRING** on Sidestick).
+  Turn it off for a cleaner HUD: while flying it shows only the instruments, and in standby or
+  freelook a **STANDBY · F9** or **FREELOOK** notice stays in the middle instead. Without the
+  line the Sidestick gets shorter and the Strip narrower.
 - **Fade when centered** — the HUD dims while the stick is at rest, so it stays out of the way.
-- **Show in standby** — keep the HUD on screen (grayed) when you're not flying.
 Under **Position**:
 
 - **Position HUD…** — shows the HUD so you can drag it anywhere. Click **Done** (on the HUD or

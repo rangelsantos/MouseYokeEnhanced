@@ -38,7 +38,7 @@ especially on takeoff and landing.
   name. You get as many as vJoy is set up for; 16 is recommended.
 - **Every key is yours.** Rebind or clear any command, on a key or a mouse button. Conflicts are
   caught, with a one-click swap.
-- **On-screen HUD.** Four styles drawn over the sim, click-through, with size, opacity and position.
+- **On-screen HUD.** Four styles drawn over the sim, click-through, with size, opacity, background and position.
 - **Profiles per aircraft.** Each keeps its own feel, keys and buttons. Import and export them to
   share.
 - **Stays out of the way.** Compact window, close to tray, and the icon shows a red dot while
@@ -100,7 +100,9 @@ button number and name it. Then bind that button in the sim's controls.
 A small click-through display drawn over Flight Simulator: stick position, trim, rudder and
 whether you're **ACTIVE** or in **STANDBY**. Choose the style, size and opacity, then drag it
 wherever you like with **Position HUD…**. Rudder and trim indicators only appear when the
-profile uses them, or you can show or hide each one yourself.
+profile uses them, or you can show or hide each one yourself. Turn the background down to 0%
+for marks only (outlined so they read over a bright sky), and hide the status line for a
+cleaner HUD.
 
 It also flashes **ACTIVE**, **STANDBY**, **TRIM RESET** or **CENTER** when you press the keys, so you know
 it worked even with the window hidden behind the sim.

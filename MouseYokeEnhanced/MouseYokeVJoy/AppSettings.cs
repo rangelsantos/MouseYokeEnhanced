@@ -32,6 +32,11 @@ public class AppSettings
 
 	public bool HudNumbers { get; set; } = true;
 
+	// The panel behind the HUD, 0..100%; 0 draws only the marks, outlined.
+	public int HudBackground { get; set; } = 100;
+
+	public bool HudStatus { get; set; } = true;
+
 	public bool HudFade { get; set; }
 
 	public bool HudInStandby { get; set; }
@@ -51,19 +56,25 @@ public class AppSettings
 	// Client height of the full window in pixels, as the user dragged it; 0 means the default.
 	public int WindowHeight { get; set; }
 
+	[JsonIgnore]
+	public HudLook Look => new HudLook(HudStyle, HudNumbers, HudBackground, HudStatus);
+
 	public static AppSettings Load()
 	{
+		AppSettings s = null;
 		try
 		{
 			if (File.Exists(PathName))
 			{
-				return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(PathName), Opts) ?? new AppSettings();
+				s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(PathName), Opts);
 			}
 		}
 		catch
 		{
 		}
-		return new AppSettings();
+		s ??= new AppSettings();
+		s.HudBackground = Math.Clamp(s.HudBackground, 0, 100);
+		return s;
 	}
 
 	public void Save()

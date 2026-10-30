@@ -69,9 +69,7 @@ public class OverlayForm : Form
 
 	private HudState state;
 
-	private HudStyle style;
-
-	private bool numbers = true;
+	private HudLook look;
 
 	private int opacity = 90;
 
@@ -142,13 +140,12 @@ public class OverlayForm : Form
 	[DllImport("user32.dll", SetLastError = true)]
 	private static extern bool UpdateLayeredWindow(nint hwnd, nint hdcDst, ref POINT pptDst, ref SIZE psize, nint hdcSrc, ref POINT pptSrc, int crKey, ref BLENDFUNCTION pblend, int dwFlags);
 
-	// The style (and the first state, which says what is shown) come in here so the first size is already
+	// The look (and the first state, which says what is shown) come in here so the first size is already
 	// right: the saved position is the top-left corner, and resizing afterwards (which keeps the center)
 	// would shift the HUD on every start.
-	public OverlayForm(HudStyle style, bool numbers, HudState state)
+	public OverlayForm(HudLook look, HudState state)
 	{
-		this.style = style;
-		this.numbers = numbers;
+		this.look = look;
 		this.state = state;
 		FormBorderStyle = FormBorderStyle.None;
 		ShowInTaskbar = false;
@@ -159,7 +156,7 @@ public class OverlayForm : Form
 		Location = LoadPosition() ?? DefaultLocation();
 	}
 
-	private Size HudLogicalSize => HudRenderer.LogicalSize(style, numbers, state);
+	private Size HudLogicalSize => HudRenderer.LogicalSize(look, state);
 
 	private Size LogicalSize
 	{
@@ -241,7 +238,7 @@ public class OverlayForm : Form
 		}
 	}
 
-	// Applies a new size, either around the current center (size, style) or from the top-left corner
+	// Applies a new size, either around the current center (size, look) or from the top-left corner
 	// (entering/leaving move mode, so the HUD doesn't jump; an element shown or hidden, so the saved
 	// corner stays right whatever the profile), kept inside that screen.
 	private void Relayout(bool keepCenter)
@@ -268,12 +265,11 @@ public class OverlayForm : Form
 		}
 	}
 
-	public void SetStyle(HudStyle style, bool numbers)
+	public void SetLook(HudLook look)
 	{
-		if (style != this.style || numbers != this.numbers)
+		if (look != this.look)
 		{
-			this.style = style;
-			this.numbers = numbers;
+			this.look = look;
 			Relayout(keepCenter: true);
 		}
 	}
@@ -363,7 +359,7 @@ public class OverlayForm : Form
 	private string FrameKey()
 	{
 		HudState s = state;
-		return string.Format(CultureInfo.InvariantCulture, "{0:F3}|{1:F3}|{2:F3}|{3:F3}|{4:F3}|{5}|{6}|{7}|{8:F2}|{9}|{10}|{11}{12}{13}", s.Roll, s.Pitch, s.Rudder, s.PitchTrim, s.RollTrim, s.Active, s.Spring, s.RudderOn, fade, ToastActive ? toast : "", s.ToggleKey, s.ShowRudder, s.ShowPitchTrim, s.ShowRollTrim);
+		return string.Format(CultureInfo.InvariantCulture, "{0:F3}|{1:F3}|{2:F3}|{3:F3}|{4:F3}|{5}|{6}|{7}|{8:F2}|{9}|{10}|{11}{12}{13}|{14}", s.Roll, s.Pitch, s.Rudder, s.PitchTrim, s.RollTrim, s.Active, s.Spring, s.RudderOn, fade, ToastActive ? toast : "", s.ToggleKey, s.ShowRudder, s.ShowPitchTrim, s.ShowRollTrim, s.Freelook);
 	}
 
 	private void Render(bool force)
@@ -392,10 +388,11 @@ public class OverlayForm : Form
 			{
 				DrawMoveFrame(g, ls, hs);
 			}
-			HudRenderer.Draw(g, style, state, numbers);
-			if (ToastActive)
+			HudRenderer.Draw(g, look, state);
+			string notice = (ToastActive ? toast : HudRenderer.StatusNotice(look, state));
+			if (notice != null)
 			{
-				HudRenderer.DrawToast(g, toast, hs);
+				HudRenderer.DrawToast(g, notice, hs);
 			}
 		}
 		byte alpha = (byte)(movable ? 255 : ((int)Math.Round(255.0 * (double)opacity / 100.0 * fade)));
