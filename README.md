@@ -33,7 +33,7 @@ especially on takeoff and landing.
 - **No jumps.** Hold a freelook key or mouse button to look around while the stick stays put,
   center the stick and rudder with one key, and optionally keep the stick's position when you
   start or stop flying.
-- **Keyboard rudder.** Smooth rudder on the vJoy Z axis from two keys.
+- **Keyboard and mouse rudder.** Smooth rudder on the vJoy Z axis from two keys, or hold left click and drag to steer both ways.
 - **Extra buttons.** Map any key to a vJoy button (gear, flaps, brakes, lights…) and give it a
   name. You get as many as vJoy is set up for; 16 is recommended.
 - **Every key is yours.** Rebind or clear any command, on a key or a mouse button. Conflicts are
