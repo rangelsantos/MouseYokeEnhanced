@@ -62,6 +62,8 @@ public class Profile
 
 	public bool RudderEnabled { get; set; }
 
+	public bool RudderLeftClick { get; set; }
+
 	public int RudderLeftVk { get; set; } = 188;
 
 	public int RudderRightVk { get; set; } = 190;

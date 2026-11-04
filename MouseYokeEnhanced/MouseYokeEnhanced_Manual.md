@@ -196,6 +196,7 @@ are hidden):
 
 - **Trim rate** — how fast the trim moves while you hold a trim key.
 - **Keyboard rudder** — see **Handy extras** below.
+- **Hold left click for rudder** — while keyboard rudder is on, hold the left mouse button and drag left or right to steer. The stick's roll input pauses during the drag; the click still reaches the sim.
 - **Rudder rate** — how fast the keyboard rudder moves out and comes back to center.
 
 ---
@@ -209,6 +210,7 @@ are hidden):
   **Keyboard rudder** and you get smooth rudder without a joystick; **Rudder rate** sets its
   speed. The rudder keys (**Comma ,** and **Period .** to start with) are on the **Keys** tab,
   under **Commands → Rudder**, which also tells you when keyboard rudder is off.
+  You can also turn on **Hold left click for rudder** to steer left or right by dragging while holding the left mouse button.
   (Remember to bind Rudder Axis in the sim, Step 4 above.)
 - **Freelook** — give **Freelook (hold)** a key or mouse button on the Keys tab. Hold it to take
   your mouse off the stick for a moment: the stick and the trim stay put, the pointer stays

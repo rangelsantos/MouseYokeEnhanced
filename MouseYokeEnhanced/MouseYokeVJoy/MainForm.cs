@@ -97,6 +97,12 @@ public partial class MainForm : Form
 
 	private bool active;
 
+	private bool rudderMouseHeld;
+
+	private int rudderMouseDeltaX;
+
+	private int rudderMouseOriginX;
+
 	private bool acquired;
 
 	private string vjoyDetails = "";
@@ -675,8 +681,14 @@ public partial class MainForm : Form
 			HudToast("TRIM RESET");
 			return;
 		}
-		if (profile.RudderEnabled)
+		if (active && profile.RudderEnabled)
 		{
+			if (profile.RudderLeftClick && vk == 1)
+			{
+				rudderMouseHeld = true;
+				rudderMouseDeltaX = 0;
+				rudderMouseOriginX = Cursor.Position.X;
+			}
 			if (vk == profile.RudderLeftVk)
 			{
 				profile.RudderLeftHeld = true;
@@ -726,6 +738,12 @@ public partial class MainForm : Form
 		{
 			profile.RudderLeftHeld = false;
 		}
+		if (profile.RudderLeftClick && vk == 1)
+		{
+			rudderMouseHeld = false;
+			rudderMouseDeltaX = 0;
+			profile.RudderLeftHeld = false;
+		}
 		if (vk == profile.RudderRightVk)
 		{
 			profile.RudderRightHeld = false;
@@ -772,6 +790,12 @@ public partial class MainForm : Form
 		}
 		else
 		{
+			profile.RudderValue = 0.0;
+			profile.RudderLeftHeld = false;
+			profile.RudderRightHeld = false;
+			rudderMouseHeld = false;
+			rudderMouseDeltaX = 0;
+			VJoy.SetAxis(16384, 1u, 50u);
 			CursorHider.Restore();
 			ReleaseCursor();
 			SetStatus(swHoldPosition.Checked ? "Standby. Stick and trim hold; mouse free for the cockpit." : "Standby. Trim holds; mouse free for the cockpit.", Theme.Muted);
@@ -1051,12 +1075,18 @@ public partial class MainForm : Form
 				SetCursorPos(cxp, cyp);
 			}
 			double baseGain = (rawRegistered ? 0.03 : 0.015);
-			springX += dx * ((double)tbRollSens.Value / 100.0 * baseGain);
+			if (!rudderMouseHeld)
+			{
+				springX += dx * ((double)tbRollSens.Value / 100.0 * baseGain);
+			}
 			springY += dy * ((double)tbPitchSens.Value / 100.0 * baseGain);
 			// Spring and smoothing were tuned as per-10 ms-tick factors; compounding them over
 			// dt keeps the same feel at whatever rate the timer actually runs.
 			double decay = 1.0 - Math.Pow(1.0 - Math.Min((double)tbCenterSpeed.Value / 100.0 * 0.01, 1.0), dt * 100.0);
-			springX -= springX * decay;
+			if (!rudderMouseHeld)
+			{
+				springX -= springX * decay;
+			}
 			springY -= springY * decay;
 			springX = Clamp(springX, -1.0, 1.0);
 			springY = Clamp(springY, -1.0, 1.0);
@@ -1084,7 +1114,14 @@ public partial class MainForm : Form
 			double cy = (double)scr2.Top + (double)scr2.Height / 2.0;
 			double nx = Clamp(((double)System.Windows.Forms.Cursor.Position.X - cx) / ((double)scr2.Width / 2.0 * Zone(tbRollSens.Value)), -1.0, 1.0);
 			double ny = Clamp(((double)System.Windows.Forms.Cursor.Position.Y - cy) / ((double)scr2.Height / 2.0 * Zone(tbPitchSens.Value)), -1.0, 1.0);
-			lastInX = nx;
+			if (rudderMouseHeld)
+			{
+				nx = lastInX;
+			}
+			else
+			{
+				lastInX = nx;
+			}
 			lastInY = ny;
 			curveInput = nx;
 			double dz = (double)tbDeadzone.Value / 100.0;
@@ -1121,26 +1158,43 @@ public partial class MainForm : Form
 		lastOutPitch = outPitch;
 		VJoy.SetAxis(ToAxis(outRoll), 1u, 48u);
 		VJoy.SetAxis(ToAxis(outPitch), 1u, 49u);
-		if (profile.RudderEnabled)
+		if (active && profile.RudderEnabled)
 		{
-			double rstep = (double)tbRudderRate.Value / 100.0 * dt;
-			if (profile.RudderLeftHeld && !profile.RudderRightHeld)
+			if (rudderMouseHeld)
 			{
-				profile.RudderValue = Clamp(profile.RudderValue - rstep, -1.0, 1.0);
+				double rudderOffset = SpringMode ? rudderMouseDeltaX : (Cursor.Position.X - rudderMouseOriginX);
+				profile.RudderValue = Clamp(rudderOffset / Math.Max(1.0, flightScreen.Width / 2.0), -1.0, 1.0);
 			}
-			else if (profile.RudderRightHeld && !profile.RudderLeftHeld)
+			else
 			{
-				profile.RudderValue = Clamp(profile.RudderValue + rstep, -1.0, 1.0);
-			}
-			else if (profile.RudderValue > 0.0)
-			{
-				profile.RudderValue = Math.Max(0.0, profile.RudderValue - rstep);
-			}
-			else if (profile.RudderValue < 0.0)
-			{
-				profile.RudderValue = Math.Min(0.0, profile.RudderValue + rstep);
+				double rstep = (double)tbRudderRate.Value / 100.0 * dt;
+				if (profile.RudderLeftHeld && !profile.RudderRightHeld)
+				{
+					profile.RudderValue = Clamp(profile.RudderValue - rstep, -1.0, 1.0);
+				}
+				else if (profile.RudderRightHeld && !profile.RudderLeftHeld)
+				{
+					profile.RudderValue = Clamp(profile.RudderValue + rstep, -1.0, 1.0);
+				}
+				else if (profile.RudderValue > 0.0)
+				{
+					profile.RudderValue = Math.Max(0.0, profile.RudderValue - rstep);
+				}
+				else if (profile.RudderValue < 0.0)
+				{
+					profile.RudderValue = Math.Min(0.0, profile.RudderValue + rstep);
+				}
 			}
 			VJoy.SetAxis(ToAxis(profile.RudderValue), 1u, 50u);
+		}
+		else
+		{
+			profile.RudderValue = 0.0;
+			profile.RudderLeftHeld = false;
+			profile.RudderRightHeld = false;
+			rudderMouseHeld = false;
+			rudderMouseDeltaX = 0;
+			VJoy.SetAxis(16384, 1u, 50u);
 		}
 		if (++frame % 3 != 0)
 		{
@@ -1278,7 +1332,7 @@ public partial class MainForm : Form
 		int primary = ((GetSystemMetrics(SM_SWAPBUTTON) != 0) ? 2 : 1);
 		foreach ((ushort down, int vk) in MouseButtonFlags)
 		{
-			if (vk == primary)
+			if (vk == primary && !(vk == 1 && profile.RudderEnabled && profile.RudderLeftClick))
 			{
 				continue;
 			}
@@ -1312,6 +1366,10 @@ public partial class MainForm : Form
 						{
 							rawDX += ri.mouse.lLastX;
 							rawDY += ri.mouse.lLastY;
+							if (rudderMouseHeld)
+							{
+								rudderMouseDeltaX += ri.mouse.lLastX;
+							}
 						}
 						if (ri.header.dwType == 0 && ri.mouse.usButtonFlags != 0)
 						{

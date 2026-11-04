@@ -150,6 +150,8 @@ public partial class MainForm
 
 	private ToggleSwitch swRudder;
 
+	private ToggleSwitch swRudderLeftClick;
+
 	private Slider tbRudderRate;
 
 	private LinkLabel lnkRudderOff;
@@ -1364,6 +1366,21 @@ public partial class MainForm
 		});
 		swRudder.Margin = new Padding(0, 4, 0, 6);
 		AddRow(trimRudder, ref qr, swRudder, SizeType.AutoSize, 0);
+		swRudderLeftClick = Switch("Hold left click for rudder", "drag left or right while held", (object? s, EventArgs e) =>
+		{
+			if (!loading)
+			{
+				profile.RudderLeftClick = swRudderLeftClick.Checked;
+				if (!swRudderLeftClick.Checked)
+				{
+					rudderMouseHeld = false;
+					rudderMouseDeltaX = 0;
+					profile.RudderLeftHeld = false;
+				}
+				SaveActiveProfile();
+			}
+		});
+		AddRow(trimRudder, ref qr, swRudderLeftClick, SizeType.AutoSize, 0);
 		tbRudderRate = AddSliderRow(trimRudder, ref qr, "Rudder rate", "ramp and return", 10, 200, 60, " %/s");
 		AddRow(t, ref row, trimRudder, SizeType.AutoSize, 0);
 		return Scroller(t);
@@ -1881,6 +1898,7 @@ public partial class MainForm
 		}
 		legend.SetLines(lines);
 		SetRowEnabled(tbRudderRate, profile.RudderEnabled);
+		swRudderLeftClick.Enabled = profile.RudderEnabled;
 		lnkRudderOff.Visible = !profile.RudderEnabled;
 	}
 
@@ -2484,6 +2502,7 @@ public partial class MainForm
 		segMode.SelectedIndex = (profile.SelfCenter ? 1 : 0);
 		swHoldPosition.Checked = profile.HoldPosition;
 		swRudder.Checked = profile.RudderEnabled;
+		swRudderLeftClick.Checked = profile.RudderLeftClick;
 		tbRudderRate.Value = profile.RudderRatePct;
 		RebuildBindingRows();
 		ReleaseHeldKeys();
